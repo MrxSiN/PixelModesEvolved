@@ -5,9 +5,32 @@ plugins {
 
 val appVersion = "0.0.1"
 
+// Release signing key, given by CI (see .github/workflows/android.yml).
+val envKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
+val envKeystoreAlias: String? = System.getenv("ANDROID_KEYSTORE_ALIAS")
+val envKeystorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val envKeyPassword: String? = System.getenv("ANDROID_KEY_PASSWORD")
+
 android {
     namespace = "my.github.MrxSiN.modeevolved"
     compileSdk = 37
+
+    val releaseSigningConfig = if (
+        !envKeystorePath.isNullOrBlank() &&
+        !envKeystoreAlias.isNullOrBlank() &&
+        !envKeystorePassword.isNullOrBlank() &&
+        !envKeyPassword.isNullOrBlank() &&
+        file(envKeystorePath).isFile
+    ) {
+        signingConfigs.create("release") {
+            storeFile = file(envKeystorePath)
+            storePassword = envKeystorePassword
+            keyAlias = envKeystoreAlias
+            keyPassword = envKeyPassword
+        }
+    } else {
+        null
+    }
 
     defaultConfig {
         applicationId = "my.github.MrxSiN.modeevolved"
@@ -29,8 +52,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Local installs share the debug key, so a release build replaces a debug one in place.
-            signingConfig = signingConfigs.getByName("debug")
+            // The release key when CI provides it. Local builds use the debug key, so a local release
+            // build replaces a debug one in place.
+            signingConfig = releaseSigningConfig ?: signingConfigs.getByName("debug")
         }
     }
 
