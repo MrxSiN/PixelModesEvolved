@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ModeEvolved</string>
+    <string name="module_description">Extends Android Modes with Wi-Fi, Bluetooth, location, movement, airplane-mode and specific-calendar-event triggers.</string>
+
+    <!-- Rows on the Settings Mode page. -->
+    <string name="row_trigger_summary">Turns this mode on · Tap to edit</string>
+    <string name="row_add_title">Add a trigger</string>
+    <string name="row_add_summary">Wi-Fi, Bluetooth, location, movement or airplane mode</string>
+    <string name="row_add_more_summary">Joins the triggers above with AND</string>
+    <!-- The button group between two triggers. And binds before Or. -->
+    <string name="join_and">AND</string>
+    <string name="join_or">OR</string>
+    <string name="join_tap_to_change">Tap to change</string>
+
+    <!-- Editor. -->
+    <string name="editor_add_title">Add a trigger</string>
+    <string name="editor_add_intro">Choose what turns this mode on. It turns off again when the trigger stops being met.</string>
+    <string name="action_save">Save</string>
+    <string name="action_back">Back</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_clear">Clear</string>
+    <string name="search_no_results">Nothing matches \"%1$s\"</string>
+    <string name="remove_title">Remove trigger?</string>
+    <string name="remove_text">%1$s will no longer turn on from this trigger.</string>
+
+    <string name="trigger_wifi">Wi-Fi network</string>
+    <string name="trigger_wifi_hint">When connected to a network</string>
+    <string name="trigger_wifi_summary">Connected to %1$s</string>
+    <string name="wifi_current">Connected now</string>
+    <string name="wifi_current_hint">The network this phone is on</string>
+    <string name="wifi_saved">Saved networks</string>
+    <string name="wifi_search">Search or type a network name</string>
+    <string name="wifi_typed">Use \"%1$s\"</string>
+    <string name="wifi_typed_hint">A network not saved on this phone</string>
+
+    <string name="trigger_bluetooth">Bluetooth device</string>
+    <string name="trigger_bluetooth_hint">When a paired device connects</string>
+    <string name="trigger_bluetooth_summary">Connected to %1$s</string>
+    <string name="bluetooth_paired">Paired devices</string>
+    <string name="bluetooth_search">Search paired devices</string>
+    <string name="bluetooth_none">No paired Bluetooth devices. Pair one in Connected devices first.</string>
+
+    <string name="trigger_area">Location</string>
+    <string name="trigger_area_hint">When you arrive at a place</string>
+    <string name="trigger_area_summary">At a place, within %1$s</string>
+    <string name="area_search">Search for a place</string>
+    <string name="area_range">Detection range</string>
+    <string name="area_recenter">My location</string>
+    <string name="area_hint">Search for a place or move the map to place the pin. The mode turns on inside the circle. Location is checked about every 5 minutes.</string>
+    <string name="distance_meters">%1$d m</string>
+    <string name="distance_kilometers">%1$.1f km</string>
+
+    <string name="trigger_movement">Movement</string>
+    <string name="trigger_movement_hint">When the phone is on the move, left still or flying</string>
+    <string name="movement_intro">On the move and left still use the low-power motion sensor, so they cost almost no battery. Flying checks satellite position every few minutes.</string>
+    <string name="movement_moving">While on the move</string>
+    <string name="movement_moving_detail">Walking, running, cycling or in a vehicle. Turns on as soon as motion is detected.</string>
+    <string name="movement_still">While left still</string>
+    <string name="movement_still_detail">The phone has not moved for 10 minutes, such as resting on a desk or nightstand.</string>
+    <string name="movement_flying">While flying</string>
+    <string name="movement_flying_detail">On board an aircraft in flight, judged from speed and altitude. Works with airplane mode on. Ends after landing.</string>
+
+    <string name="trigger_airplane">Airplane mode</string>
+    <string name="trigger_airplane_hint">When airplane mode is on or off</string>
+    <string name="airplane_on">While airplane mode is on</string>
+    <string name="airplane_on_detail">Turns this mode on as soon as airplane mode is switched on, such as when boarding a flight.</string>
+    <string name="airplane_off">While airplane mode is off</string>
+    <string name="airplane_off_detail">Turns this mode on whenever airplane mode is off.</string>
+
+    <!-- Added to Android's stock Calendar events schedule page. -->
+    <string name="calendar_event_filter">Event</string>
+    <string name="calendar_event_any">Any event</string>
+    <string name="calendar_event_choose">Event filter</string>
+    <string name="calendar_event_intro">Narrow the calendar schedule to one event, or to every event whose title contains a keyword.</string>
+    <string name="calendar_filter_any">Any</string>
+    <string name="calendar_filter_one">One event</string>
+    <string name="calendar_filter_keyword">Keyword</string>
+    <string name="calendar_event_any_hint">Every event allowed by the calendar and invite-response settings turns this mode on, as Android does by default.</string>
+    <string name="calendar_event_upcoming">Upcoming events</string>
+    <string name="calendar_event_search">Search upcoming events</string>
+    <string name="calendar_event_none">No events in the next 30 days.</string>
+    <string name="calendar_event_saved">Previously selected event</string>
+    <string name="calendar_keyword_section">Title keyword</string>
+    <string name="calendar_keyword_label">Word or phrase in the event title</string>
+    <string name="calendar_keyword_hint">Matches titles containing it, ignoring upper and lower case. Events added later match too.</string>
+    <string name="calendar_keyword_matches">Upcoming matches</string>
+    <string name="calendar_keyword_no_matches">No upcoming events match yet.</string>
+    <string name="calendar_keyword_summary">Title contains \"%1$s\"</string>
+
+    <!-- Added to Android's stock Day and time and Calendar events schedule pages. -->
+    <string name="schedule_remove">Remove schedule</string>
+    <string name="schedule_remove_title">Remove schedule?</string>
+    <string name="schedule_remove_text">%1$s will no longer turn on by itself on this schedule. Its settings and triggers stay.</string>
+    <string name="schedule_remove_confirm">Remove</string>
+
+    <!-- Mode actions. -->
+    <string name="actions_title">Mode actions</string>
+    <string name="actions_add_title">Add an action</string>
+    <string name="actions_add_summary">Open an app, send an intent or run a Tasker task</string>
+    <string name="actions_add_intro">Choose what happens when this mode turns on or off, however it was switched.</string>
+    <string name="actions_remove_title">Remove action?</string>
+    <string name="actions_remove_text">This will no longer run when %1$s changes.</string>
+
+    <string name="timing_start">Turns on</string>
+    <string name="timing_end">Turns off</string>
+    <string name="timing_start_summary">When this mode turns on · Tap to edit</string>
+    <string name="timing_end_summary">When this mode turns off · Tap to edit</string>
+
+    <string name="action_launch_app">Open an app</string>
+    <string name="action_launch_app_hint">Opens an app on the screen</string>
+    <string name="action_launch_app_summary">Open %1$s</string>
+    <string name="action_apps">Apps</string>
+    <string name="action_apps_search">Search apps</string>
+
+    <string name="action_broadcast">Send an intent</string>
+    <string name="action_broadcast_hint">Broadcast for Tasker, Automate, MacroDroid and other apps</string>
+    <string name="action_broadcast_summary">Send %1$s</string>
+    <string name="action_broadcast_intent">Intent</string>
+    <string name="action_broadcast_action">Action</string>
+    <string name="action_broadcast_package">Only to package (optional)</string>
+    <string name="action_broadcast_note">The broadcast carries the extras mode_id, mode_name and mode_active. In Tasker, catch it with Event › System › Intent Received, using the same action.</string>
+
+    <string name="action_tasker">Run a Tasker task</string>
+    <string name="action_tasker_hint">Runs one of your Tasker tasks by name</string>
+    <string name="action_tasker_summary">Run Tasker task \"%1$s\"</string>
+    <string name="action_tasker_tasks">Your tasks</string>
+    <string name="action_tasker_name_section">Task name</string>
+    <string name="action_tasker_name">Task name, exactly as in Tasker</string>
+    <string name="action_tasker_note">Tasker only runs tasks for other apps when Tasker › Preferences › Misc › Allow External Access is on.</string>
+</resources>

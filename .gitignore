@@ -1,0 +1,11 @@
+.artifacts
+.gradle/
+.idea/
+local.properties
+**/build/
+*.iml
+*.jks
+*.keystore
+*.base64
+.kotlin/
+tmp/

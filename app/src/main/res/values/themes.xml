@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws every surface; the window only needs no action bar and the right day/night base. -->
+    <style name="Theme.ModeEvolved.Editor" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <!-- The page's own container color, so the window is never black while the first frame is drawn. -->
+        <item name="android:windowBackground">@android:color/system_surface_container_light</item>
+    </style>
+</resources>

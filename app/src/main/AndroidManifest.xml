@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Map tiles for the location trigger's map. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Lets the action editor list apps that can be opened. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <!--
+        Triggers are listed on each Mode's page in Settings and run inside
+        system_server. This app holds the hook code, the strings and icons the
+        Mode page borrows, and the editor that page opens.
+    -->
+    <application
+        android:allowBackup="false"
+        android:description="@string/module_description"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true">
+
+        <!--
+            Exported because the Settings app starts it. It checks that the
+            caller is Settings itself and closes for anyone else.
+        -->
+        <activity
+            android:name=".editor.EditorActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:exported="true"
+            android:theme="@style/Theme.ModeEvolved.Editor"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+
+</manifest>
