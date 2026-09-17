@@ -13,10 +13,10 @@ interface Logger {
     fun warn(message: String, error: Throwable? = null)
 }
 
-/** [Logger] backed by logcat, readable with `adb logcat -s ModeEvolved`. */
+/** [Logger] backed by logcat, readable with `adb logcat -s PixelModesEvolved`. */
 object AndroidLogger : Logger {
 
-    private const val TAG = "ModeEvolved"
+    private const val TAG = "PixelModesEvolved"
 
     override fun info(message: String) {
         Log.i(TAG, message)

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ModeEvolved</string>
+    <string name="app_name">Pixel Modes Evolved</string>
     <string name="module_description">Extends Android Modes with Wi-Fi, Bluetooth, location, movement, airplane-mode and specific-calendar-event triggers.</string>
 
     <!-- Rows on the Settings Mode page. -->

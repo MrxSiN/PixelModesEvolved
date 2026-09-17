@@ -18,8 +18,8 @@ phone.
 
 ### Install
 
-1. Install `ModeEvolved-v0.0.1.apk`
-2. Enable ModeEvolved in Vector (static scope: System Framework and Settings)
+1. Install `PixelModesEvolved-v0.0.1.apk`
+2. Enable Pixel Modes Evolved in Vector (static scope: System Framework and Settings)
 3. Reboot once
 4. Settings → Modes → a Mode → Mode settings
 

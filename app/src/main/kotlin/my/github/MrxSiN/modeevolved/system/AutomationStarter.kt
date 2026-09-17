@@ -82,6 +82,6 @@ class AutomationStarter(private val logger: Logger) {
     }
 
     private companion object {
-        const val THREAD_NAME = "ModeEvolved"
+        const val THREAD_NAME = "PixelModesEvolved"
     }
 }

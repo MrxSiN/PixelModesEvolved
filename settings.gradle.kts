@@ -17,5 +17,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ModeEvolved"
+rootProject.name = "PixelModesEvolved"
 include(":app")

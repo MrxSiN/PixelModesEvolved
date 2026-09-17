@@ -38,6 +38,6 @@ class NotificationModeController(
     private fun condition(id: Uri, state: Int) = Condition(id, SUMMARY, state, Condition.SOURCE_CONTEXT)
 
     private companion object {
-        const val SUMMARY = "ModeEvolved trigger"
+        const val SUMMARY = "Pixel Modes Evolved trigger"
     }
 }

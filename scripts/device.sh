@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Install and diagnose ModeEvolved on a connected device (root and Vector required).
+# Install and diagnose Pixel Modes Evolved on a connected device (root and Vector required).
 #
 #   scripts/device.sh install   build, install, enable in Vector, set scope
 #   scripts/device.sh logs      follow this module's log lines
@@ -19,14 +19,14 @@ export MSYS_NO_PATHCONV=1
 case "${1:-check}" in
     install)
         (cd "$ROOT" && ./gradlew.bat assembleRelease)
-        $ADB install -r "$(cygpath -w "$ROOT/app/build/outputs/apk/release/ModeEvolved-v0.0.1.apk")"
+        $ADB install -r "$(cygpath -w "$ROOT/app/build/outputs/apk/release/PixelModesEvolved-v0.0.1.apk")"
         $ADB shell "$CLI modules enable $PACKAGE"
         $ADB shell "$CLI scope set $PACKAGE system/0 com.android.settings/0"
         $ADB shell am force-stop com.android.settings
         echo "Live now: system_server hot reloads, Settings restarts once hidden."
         ;;
     logs)
-        $ADB logcat -v time -s ModeEvolved
+        $ADB logcat -v time -s PixelModesEvolved
         ;;
     rules)
         $ADB shell settings get secure mode_evolved_rules
@@ -41,7 +41,7 @@ case "${1:-check}" in
         echo "== vector";  $ADB shell "$CLI modules ls" | grep "$PACKAGE" || echo "not listed"
         $ADB shell "$CLI scope ls $PACKAGE"
         echo "== rules";   $ADB shell settings get secure mode_evolved_rules
-        echo "== log";     $ADB logcat -d -s ModeEvolved | tail -n 40
+        echo "== log";     $ADB logcat -d -s PixelModesEvolved | tail -n 40
         ;;
     *)
         echo "usage: $0 install|logs|rules|modes|check" >&2

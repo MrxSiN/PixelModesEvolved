@@ -51,7 +51,7 @@ jobs:
           VERSION="$(sed -n 's/^val appVersion = "\([^"]*\)"/\1/p' app/build.gradle.kts)"
           test -n "$VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "apk_path=app/build/outputs/apk/release/ModeEvolved-v$VERSION.apk" >> "$GITHUB_OUTPUT"
+          echo "apk_path=app/build/outputs/apk/release/PixelModesEvolved-v$VERSION.apk" >> "$GITHUB_OUTPUT"
 
           if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
             echo "Tag $GITHUB_REF_NAME does not match project version v$VERSION." >&2
@@ -86,15 +86,15 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         shell: bash
         run: |
-          printf '%s' "$SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/modeevolved-release.keystore"
-          chmod 600 "$RUNNER_TEMP/modeevolved-release.keystore"
+          printf '%s' "$SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/pixelmodesevolved-release.keystore"
+          chmod 600 "$RUNNER_TEMP/pixelmodesevolved-release.keystore"
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
 
       - name: Build release APK
         env:
-          ANDROID_KEYSTORE_PATH: ${{ steps.signing.outputs.enabled == 'true' && format('{0}/modeevolved-release.keystore', runner.temp) || '' }}
+          ANDROID_KEYSTORE_PATH: ${{ steps.signing.outputs.enabled == 'true' && format('{0}/pixelmodesevolved-release.keystore', runner.temp) || '' }}
           ANDROID_KEYSTORE_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           ANDROID_KEYSTORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
@@ -121,7 +121,7 @@ jobs:
       - name: Upload APK to workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ModeEvolved-v${{ steps.metadata.outputs.version }}-${{ github.run_number }}
+          name: PixelModesEvolved-v${{ steps.metadata.outputs.version }}-${{ github.run_number }}
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 30

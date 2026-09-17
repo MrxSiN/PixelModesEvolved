@@ -104,7 +104,7 @@ androidComponents {
             variant.androidResources.aaptAdditionalParameters.addAll("--stable-ids", stableResourceIds.path)
         }
         variant.outputs.forEach { output ->
-            output.outputFileName.set("ModeEvolved-v$appVersion.apk")
+            output.outputFileName.set("PixelModesEvolved-v$appVersion.apk")
         }
     }
 }

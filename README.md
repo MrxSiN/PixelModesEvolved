@@ -201,7 +201,7 @@ Built against the modern [libxposed API](https://github.com/libxposed/api)
 
 ```
 1. Install the APK from Releases
-2. Enable ModeEvolved in Vector
+2. Enable Pixel Modes Evolved in Vector
 3. Reboot once
 4. Settings → Modes → a Mode → Mode settings
 ```
@@ -249,7 +249,7 @@ back.
   Saving a trigger is an explicit choice.
 - Removing the last trigger of a Mode that the triggers held on turns that Mode off.
 
-Location requests are attributed as `android[ModeEvolved]`, visible in `adb shell dumpsys location`.
+Location requests are attributed as `android[PixelModesEvolved]`, visible in `adb shell dumpsys location`.
 
 </details>
 

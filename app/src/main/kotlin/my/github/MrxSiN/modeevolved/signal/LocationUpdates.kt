@@ -50,6 +50,6 @@ class LocationUpdates(
     }
 
     private companion object {
-        const val ATTRIBUTION_TAG = "ModeEvolved"
+        const val ATTRIBUTION_TAG = "PixelModesEvolved"
     }
 }

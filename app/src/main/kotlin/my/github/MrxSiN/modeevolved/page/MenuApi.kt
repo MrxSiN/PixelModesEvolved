@@ -38,7 +38,7 @@ class MenuApi(private val classLoader: ClassLoader) {
                 "onMenuItemSelected" -> onSelect(args[0] as MenuItem)
                 "equals" -> proxy === args[0]
                 "hashCode" -> System.identityHashCode(proxy)
-                "toString" -> "ModeEvolved menu"
+                "toString" -> "Pixel Modes Evolved menu"
                 else -> null
             }
         }
