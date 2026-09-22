@@ -103,12 +103,21 @@ android {
  * can run hook code from the previous build while reading this build's resources, and a shifted ID
  * would show the wrong string. aapt2 keeps the IDs in this file and gives new resources new IDs;
  * after each release link, the file is refreshed from the IDs aapt2 wrote, so new ones are kept too.
+ *
+ * The lines are sorted on the way in. aapt2 writes them in the order of its own map, which differs
+ * between machines, so an unsorted copy is a different file on every host even when every ID in it
+ * is identical. Sorting makes the file a function of the IDs alone, which is what lets CI check it
+ * is committed and keeps a new resource to a one-line diff. aapt2 reads the file as a lookup, so
+ * the order it is given in means nothing to it.
  */
 val stableResourceIds: File = layout.projectDirectory.file("resource-ids.txt").asFile
 
 tasks.matching { it.name == "processReleaseResources" }.configureEach {
     val emitted = layout.buildDirectory.file("intermediates/stable_resource_ids_file/release/processReleaseResources/stableIds.txt")
-    doLast { emitted.get().asFile.copyTo(stableResourceIds, overwrite = true) }
+    doLast {
+        val ids = emitted.get().asFile.readLines().filter { it.isNotBlank() }.sorted()
+        stableResourceIds.writeText(ids.joinToString(separator = "\n", postfix = "\n"))
+    }
 }
 
 androidComponents {
