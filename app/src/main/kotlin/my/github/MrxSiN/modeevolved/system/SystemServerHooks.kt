@@ -6,7 +6,9 @@ import android.content.Context
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
-import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.core.Feature
+import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
 
 /**
  * Where this module enters system_server.
@@ -20,13 +22,13 @@ import my.github.MrxSiN.modeevolved.core.Logger
 @SuppressLint("PrivateApi")
 class SystemServerHooks(
     private val xposed: XposedInterface,
-    private val classLoader: ClassLoader,
-    private val logger: Logger,
+    private val classes: ClassFinder,
+    private val features: FeatureInstaller,
     private val onBootCompleted: (Context) -> Unit,
 ) {
 
     fun install() {
-        guarded("boot completed", ::hookBootCompleted)
+        features.install(Feature.AUTOMATION_START, ::hookBootCompleted)
     }
 
     /**
@@ -36,25 +38,23 @@ class SystemServerHooks(
      * notification service can take mode changes.
      */
     private fun hookBootCompleted() {
-        val service = classLoader.loadClass(NOTIFICATION_SERVICE)
-        val onBootPhase = service.getDeclaredMethod("onBootPhase", Int::class.javaPrimitiveType)
+        val service = classes.load(NOTIFICATION_SERVICE)
+        val onBootPhase = classes.member("NotificationManagerService.onBootPhase(int)") {
+            service.getDeclaredMethod("onBootPhase", Int::class.javaPrimitiveType)
+        }
         var started = false
 
         xposed.hook(onBootPhase).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
             val result = chain.proceed()
             if (!started && chain.args[0] == PHASE_BOOT_COMPLETED) {
                 started = true
-                val context = chain.thisObject.javaClass.getMethod("getContext").invoke(chain.thisObject) as Context
+                val context = classes.member("NotificationManagerService.getContext()") {
+                    chain.thisObject.javaClass.getMethod("getContext")
+                }.invoke(chain.thisObject) as Context
                 onBootCompleted(context)
             }
             result
         }
-    }
-
-    private fun guarded(name: String, install: () -> Unit) {
-        runCatching(install)
-            .onSuccess { logger.info("Hooked $name") }
-            .onFailure { logger.warn("Could not hook $name", it) }
     }
 
     private companion object {

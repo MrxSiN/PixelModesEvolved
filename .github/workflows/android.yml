@@ -31,6 +31,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          # The version code is derived from the commit being built, which needs its date.
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -57,6 +60,23 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match project version v$VERSION." >&2
             exit 1
           fi
+
+      - name: Derive the version code from the commit
+        shell: bash
+        run: |
+          # Seconds since 2026-01-01 UTC, from the commit's own date rather than the clock, so
+          # rebuilding a tag produces the same APK. Vector still sees a new code on every commit,
+          # which is what makes it hot reload system_server.
+          COMMIT_EPOCH="$(git log -1 --format=%ct)"
+          VERSION_CODE=$(( COMMIT_EPOCH - 1767225600 ))
+
+          if (( VERSION_CODE <= 0 )); then
+            echo "Commit date $COMMIT_EPOCH is before the version epoch; the version code would not be usable." >&2
+            exit 1
+          fi
+
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "Version code $VERSION_CODE, from commit $(git rev-parse --short HEAD)."
 
       - name: Check signing configuration
         id: signing
@@ -99,6 +119,17 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Check the stable resource IDs are committed
+        shell: bash
+        run: |
+          # Linking the release refreshes app/resource-ids.txt from the IDs aapt2 wrote. Hot
+          # reload leans on those IDs never shifting between builds, which only holds while the
+          # file in the repository is the one the build produced.
+          if ! git diff --exit-code -- app/resource-ids.txt; then
+            echo "::error file=app/resource-ids.txt::Building changed app/resource-ids.txt. Run './gradlew assembleRelease' and commit the result; without it, Settings can read the wrong string from a build it is being replaced by." >&2
+            exit 1
+          fi
 
       - name: Locate and verify APK
         id: apk

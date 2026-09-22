@@ -28,10 +28,40 @@ class TriggerTest {
         val trigger = AreaTrigger(home, radiusMeters = 150.0)
         val near = GeoPoint(3.1400, 101.6869) // about 111 m north
         val far = GeoPoint(3.1420, 101.6869) // about 334 m north
-        assertTrue(trigger.isMetBy(DeviceState(location = near)))
-        assertFalse(trigger.isMetBy(DeviceState(location = far)))
+        assertTrue(trigger.isMetBy(at(near)))
+        assertFalse(trigger.isMetBy(at(far)))
         assertFalse(trigger.isMetBy(DeviceState()))
     }
+
+    @Test
+    fun `leaving an area needs a quarter more than arriving did`() {
+        val trigger = AreaTrigger(home, radiusMeters = 150.0)
+        val justOutside = GeoPoint(3.1405, 101.6869) // about 167 m north
+
+        // Between the 150 m entry boundary and the 187.5 m exit boundary.
+        assertFalse(trigger.isMetBy(at(justOutside), wasMet = false))
+        assertTrue(trigger.isMetBy(at(justOutside), wasMet = true))
+    }
+
+    @Test
+    fun `a fix less precise than the area widens the exit boundary to its own accuracy`() {
+        val trigger = AreaTrigger(home, radiusMeters = 50.0)
+        val north = GeoPoint(3.1400, 101.6869) // about 111 m north
+
+        // A 100 m fix must be more than 150 m out before it can say the phone left.
+        assertTrue(trigger.isMetBy(at(north, accuracy = 100.0), wasMet = true))
+        // A precise fix at the same place has left: its boundary is only 62.5 m.
+        assertFalse(trigger.isMetBy(at(north, accuracy = 5.0), wasMet = true))
+    }
+
+    @Test
+    fun `an unknown position is never inside, whatever was answered before`() {
+        val trigger = AreaTrigger(home, radiusMeters = 150.0)
+        assertFalse(trigger.isMetBy(DeviceState(), wasMet = true))
+    }
+
+    private fun at(point: GeoPoint, accuracy: Double? = null) =
+        DeviceState(location = LocationSample(point, accuracyMeters = accuracy))
 
     @Test
     fun `haversine distance is accurate`() {

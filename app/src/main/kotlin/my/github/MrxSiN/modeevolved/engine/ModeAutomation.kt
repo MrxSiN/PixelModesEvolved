@@ -32,11 +32,14 @@ class ModeAutomation(
      * Stops watching rules and signals, leaving every Mode as it is. Call on [thread].
      *
      * The engine is not told that signals stopped, so no Mode is switched off on the way out.
+     * It does drop the edges it was still waiting out, which would otherwise switch a Mode
+     * from a build that has already handed over.
      */
     fun stop() {
         observer?.close()
         observer = null
         hub.stop()
+        engine.stop()
     }
 
     private fun reload() {

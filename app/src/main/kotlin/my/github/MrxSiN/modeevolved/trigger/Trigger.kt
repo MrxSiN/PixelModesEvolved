@@ -12,6 +12,14 @@ interface Trigger {
     val signal: Signal
 
     fun isMetBy(state: DeviceState): Boolean
+
+    /**
+     * The same answer, told what this trigger answered last time.
+     *
+     * A trigger reading a noisy input overrides this to resist flapping. The
+     * rest read a clean yes or no and ignore [wasMet].
+     */
+    fun isMetBy(state: DeviceState, wasMet: Boolean): Boolean = isMetBy(state)
 }
 
 /** Met while connected to the Wi-Fi network named [ssid]. */
@@ -30,11 +38,33 @@ data class BluetoothTrigger(val address: String, val name: String) : Trigger {
     override fun isMetBy(state: DeviceState): Boolean = address.uppercase() in state.bluetoothDevices
 }
 
-/** Met while the last position fix is within [radiusMeters] of [center]. */
+/**
+ * Met while the last position fix is within [radiusMeters] of [center].
+ *
+ * Leaving takes more than arriving did: once inside, the fix must clear a
+ * boundary wider by [EXIT_MARGIN_SHARE] of the radius, or by the fix's own
+ * accuracy when that is larger. A 100 m-accurate fix against a 50 m area
+ * therefore settles on one answer instead of flapping along the edge, and a
+ * Mode is not switched twice a minute while the phone sits on a desk indoors.
+ */
 data class AreaTrigger(val center: GeoPoint, val radiusMeters: Double) : Trigger {
+
     override val signal: Signal get() = Signal.LOCATION
-    override fun isMetBy(state: DeviceState): Boolean =
-        state.location?.let { it.distanceTo(center) <= radiusMeters } ?: false
+
+    override fun isMetBy(state: DeviceState): Boolean = isMetBy(state, wasMet = false)
+
+    override fun isMetBy(state: DeviceState, wasMet: Boolean): Boolean {
+        val sample = state.location ?: return false
+        return sample.point.distanceTo(center) <= boundaryFor(sample, wasMet)
+    }
+
+    private fun boundaryFor(sample: LocationSample, wasMet: Boolean): Double =
+        if (wasMet) radiusMeters + maxOf(radiusMeters * EXIT_MARGIN_SHARE, sample.accuracyMeters ?: 0.0) else radiusMeters
+
+    private companion object {
+        /** The least a fix must travel past the edge to count as having left. */
+        const val EXIT_MARGIN_SHARE = 0.25
+    }
 }
 
 /** Met while the device is [movement]. Flying reads its own signal, since the motion sensor cannot tell it apart. */

@@ -184,7 +184,7 @@ private fun <I : Any> KindScreen(
 @Composable
 internal fun EditorScaffold(
     title: String,
-    subtitle: String,
+    subtitle: String?,
     onBack: () -> Unit,
     fillsScreen: Boolean = false,
     actions: @Composable () -> Unit = {},
@@ -192,6 +192,8 @@ internal fun EditorScaffold(
     content: @Composable () -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // The bars take a slot rather than a nullable one, so a page without a subtitle draws nothing in it.
+    val subtitleSlot = @Composable { subtitle?.let { Text(it) } }
     val backButton = @Composable {
         IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
             Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.action_back))
@@ -205,7 +207,7 @@ internal fun EditorScaffold(
             if (fillsScreen) {
                 TopAppBar(
                     title = { Text(title) },
-                    subtitle = { Text(subtitle) },
+                    subtitle = { subtitleSlot() },
                     navigationIcon = backButton,
                     actions = { actions() },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -213,7 +215,7 @@ internal fun EditorScaffold(
             } else {
                 LargeFlexibleTopAppBar(
                     title = { Text(title) },
-                    subtitle = { Text(subtitle) },
+                    subtitle = { subtitleSlot() },
                     navigationIcon = backButton,
                     actions = { actions() },
                     scrollBehavior = scrollBehavior,

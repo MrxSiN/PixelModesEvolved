@@ -9,26 +9,33 @@ import io.github.libxposed.api.XposedInterface.ExceptionMode
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.calendar.CalendarConditionFilter
 import my.github.MrxSiN.modeevolved.calendar.EventFilter
+import my.github.MrxSiN.modeevolved.core.Feature
+import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
+import my.github.MrxSiN.modeevolved.dex.SettingsClasses
 
 /** Adds an event filter to Android's existing Calendar events schedule page. */
 @SuppressLint("PrivateApi")
 class StockCalendarHooks(
     private val xposed: XposedInterface,
-    private val classLoader: ClassLoader,
+    private val classes: ClassFinder,
+    private val features: FeatureInstaller,
     private val logger: Logger,
     private val textFor: (Context) -> ModuleText,
 ) {
 
     fun install() {
-        runCatching {
-            val controller = classLoader.loadClass(CONTROLLER)
-            val preference = classLoader.loadClass("androidx.preference.Preference")
-            val zenMode = classLoader.loadClass("com.android.settingslib.notification.modes.ZenMode")
-            val update = controller.getDeclaredMethod("updateState", preference, zenMode)
+        features.install(Feature.CALENDAR_ROW) {
+            val controller = classes.load(CONTROLLER)
+            val preference = classes.load("androidx.preference.Preference")
+            val zenMode = classes.find(SettingsClasses.zenMode)
+            val update = classes.member("ZenModeSetCalendarPreferenceController.updateState(Preference, ZenMode)") {
+                controller.getDeclaredMethod("updateState", preference, zenMode)
+            }
             val section = StockCalendarSection(
-                PreferenceApi(classLoader),
-                ZenModeApi(classLoader),
+                PreferenceApi(classes),
+                ZenModeApi(classes),
                 CalendarEventEditorLauncher(),
                 textFor,
             )
@@ -40,8 +47,6 @@ class StockCalendarHooks(
                 result
             }
         }
-            .onSuccess { logger.info("Hooked Calendar events") }
-            .onFailure { logger.warn("Could not hook Calendar events", it) }
     }
 
     private companion object {

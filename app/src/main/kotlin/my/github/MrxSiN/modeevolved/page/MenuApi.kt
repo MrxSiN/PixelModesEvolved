@@ -5,22 +5,26 @@ import android.view.Menu
 import android.view.MenuItem
 import java.lang.reflect.Proxy
 
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
+
 /**
  * Adds items to the app bar of a Settings page, through the Settings app's own androidx classes.
  *
  * Items are registered as a `MenuProvider` bound to the page's fragment, so they show while it is
  * resumed and go away with it, as the stock Mode page's own menu does.
  */
-class MenuApi(private val classLoader: ClassLoader) {
+class MenuApi(classes: ClassFinder) {
 
-    private val fragment = classLoader.loadClass("androidx.fragment.app.Fragment")
-    private val provider = classLoader.loadClass("androidx.core.view.MenuProvider")
-    private val lifecycleOwner = classLoader.loadClass("androidx.lifecycle.LifecycleOwner")
-    private val state = classLoader.loadClass("androidx.lifecycle.Lifecycle\$State")
-    private val requireActivity = fragment.getMethod("requireActivity")
-    private val addProvider = classLoader.loadClass("androidx.activity.ComponentActivity")
-        .getMethod("addMenuProvider", provider, lifecycleOwner, state)
-    private val resumed = state.getField("RESUMED").get(null)
+    private val classLoader = classes.classLoader
+    private val fragment = classes.load("androidx.fragment.app.Fragment")
+    private val provider = classes.load("androidx.core.view.MenuProvider")
+    private val lifecycleOwner = classes.load("androidx.lifecycle.LifecycleOwner")
+    private val state = classes.load("androidx.lifecycle.Lifecycle\$State")
+    private val requireActivity = classes.member("Fragment.requireActivity()") { fragment.getMethod("requireActivity") }
+    private val addProvider = classes.member("ComponentActivity.addMenuProvider(MenuProvider, LifecycleOwner, State)") {
+        classes.load("androidx.activity.ComponentActivity").getMethod("addMenuProvider", provider, lifecycleOwner, state)
+    }
+    private val resumed = classes.member("Lifecycle.State.RESUMED") { state.getField("RESUMED").get(null) }
 
     /** The activity showing [page], a fragment. */
     fun activity(page: Any): Activity = requireActivity.invoke(page) as Activity

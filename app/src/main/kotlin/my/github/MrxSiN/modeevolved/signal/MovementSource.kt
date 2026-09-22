@@ -1,12 +1,7 @@
 package my.github.MrxSiN.modeevolved.signal
 
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorManager
-import android.hardware.TriggerEvent
-import android.hardware.TriggerEventListener
-import android.os.Handler
-
+import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.engine.Delays
 import my.github.MrxSiN.modeevolved.engine.SignalSource
 import my.github.MrxSiN.modeevolved.trigger.Movement
 import my.github.MrxSiN.modeevolved.trigger.Signal
@@ -15,47 +10,61 @@ import my.github.MrxSiN.modeevolved.trigger.StateUpdate
 /**
  * Moving or still, from the significant motion sensor.
  *
- * That sensor is a low-power, one-shot wake-up: it fires once when the person
- * starts walking, cycling or driving. It is re-armed after every event, and a
- * quiet period of [STILL_AFTER_MILLIS] without one counts as still.
+ * The sensor is a low-power one-shot wake-up: it fires once when the person
+ * starts walking, cycling or driving, and is armed again after every event.
+ *
+ * Movement begins unknown, never still. "Left still" means the phone has not
+ * moved for [STILL_AFTER_MILLIS], and at the moment this source starts nobody
+ * knows that yet, so the answer is withheld until the sensor has stayed quiet
+ * that long. Publishing still at once would make a "left still" rule true the
+ * instant the phone booted, or the instant the rule was saved.
  */
-class MovementSource(context: Context, private val handler: Handler) : SignalSource {
+class MovementSource(
+    private val sensor: MotionSensor,
+    private val delays: Delays,
+    private val logger: Logger,
+) : SignalSource {
 
     override val signal: Signal = Signal.MOVEMENT
 
-    private val sensors = context.getSystemService(SensorManager::class.java)
-    private val motion: Sensor? = sensors.getDefaultSensor(Sensor.TYPE_SIGNIFICANT_MOTION)
     private var publish: ((StateUpdate) -> Unit)? = null
-
-    private val trigger = object : TriggerEventListener() {
-        override fun onTrigger(event: TriggerEvent) {
-            handler.post(::onMotion)
-        }
-    }
-
-    private val settle = Runnable { emit(Movement.STILL) }
+    private var settling: AutoCloseable? = null
 
     override fun start(publish: (StateUpdate) -> Unit) {
-        val sensor = checkNotNull(motion) { "No significant motion sensor" }
         this.publish = publish
-        check(sensors.requestTriggerSensor(trigger, sensor)) { "Significant motion sensor refused" }
-        emit(Movement.STILL)
+        // Throws when the device has no such sensor, which leaves the hub with no movement signal.
+        sensor.arm(::onMotion)
+        awaitStill()
     }
 
     override fun stop() {
-        motion?.let { sensors.cancelTriggerSensor(trigger, it) }
-        handler.removeCallbacks(settle)
+        sensor.disarm()
+        cancelSettling()
         publish?.invoke { it.copy(movement = null) }
         publish = null
     }
 
     private fun onMotion() {
-        val sensor = motion ?: return
         if (publish == null) return
         emit(Movement.MOVING)
-        handler.removeCallbacks(settle)
-        handler.postDelayed(settle, STILL_AFTER_MILLIS)
-        sensors.requestTriggerSensor(trigger, sensor)
+        awaitStill()
+        // Re-arming is the only step that can fail once running, and losing it costs this signal alone.
+        runCatching { sensor.arm(::onMotion) }
+            .onFailure { logger.warn("Could not arm the motion sensor again", it) }
+    }
+
+    /** Still is published only once the sensor has stayed quiet for the whole wait. */
+    private fun awaitStill() {
+        cancelSettling()
+        settling = delays.after(STILL_AFTER_MILLIS) {
+            settling = null
+            emit(Movement.STILL)
+        }
+    }
+
+    private fun cancelSettling() {
+        settling?.close()
+        settling = null
     }
 
     private fun emit(movement: Movement) {

@@ -11,14 +11,22 @@ import my.github.MrxSiN.modeevolved.store.ModeMapCodec
 typealias ActionKind<T> = JsonKind<ModeAction, T>
 
 private const val TIMING = "timing"
+private const val COOLDOWN = "cooldown"
 
 private fun JSONObject.timing() = Timing.valueOf(getString(TIMING))
 
+/** Absent in rules stored before cooldowns existed, which ran every time. */
+private fun JSONObject.cooldown() = optLong(COOLDOWN, 0L)
+
+private fun JSONObject.putCommon(item: ModeAction): JSONObject =
+    put(TIMING, item.timing.name).put(COOLDOWN, item.cooldownMillis)
+
 object LaunchAppKind : ActionKind<LaunchAppAction>("launchApp", LaunchAppAction::class.java) {
     override fun write(item: LaunchAppAction): JSONObject =
-        JSONObject().put(TIMING, item.timing.name).put(PACKAGE, item.packageName).put(LABEL, item.label)
+        JSONObject().putCommon(item).put(PACKAGE, item.packageName).put(LABEL, item.label)
 
-    override fun decode(json: JSONObject) = LaunchAppAction(json.timing(), json.getString(PACKAGE), json.optString(LABEL))
+    override fun decode(json: JSONObject) =
+        LaunchAppAction(json.timing(), json.getString(PACKAGE), json.optString(LABEL), json.cooldown())
 
     private const val PACKAGE = "package"
     private const val LABEL = "label"
@@ -26,10 +34,10 @@ object LaunchAppKind : ActionKind<LaunchAppAction>("launchApp", LaunchAppAction:
 
 object BroadcastKind : ActionKind<BroadcastAction>("broadcast", BroadcastAction::class.java) {
     override fun write(item: BroadcastAction): JSONObject =
-        JSONObject().put(TIMING, item.timing.name).put(ACTION, item.intentAction).putOpt(PACKAGE, item.packageName)
+        JSONObject().putCommon(item).put(ACTION, item.intentAction).putOpt(PACKAGE, item.packageName)
 
     override fun decode(json: JSONObject) =
-        BroadcastAction(json.timing(), json.getString(ACTION), json.optString(PACKAGE).ifEmpty { null })
+        BroadcastAction(json.timing(), json.getString(ACTION), json.optString(PACKAGE).ifEmpty { null }, json.cooldown())
 
     private const val ACTION = "action"
     private const val PACKAGE = "package"
@@ -37,9 +45,9 @@ object BroadcastKind : ActionKind<BroadcastAction>("broadcast", BroadcastAction:
 
 object TaskerTaskKind : ActionKind<TaskerTaskAction>("taskerTask", TaskerTaskAction::class.java) {
     override fun write(item: TaskerTaskAction): JSONObject =
-        JSONObject().put(TIMING, item.timing.name).put(TASK, item.taskName)
+        JSONObject().putCommon(item).put(TASK, item.taskName)
 
-    override fun decode(json: JSONObject) = TaskerTaskAction(json.timing(), json.getString(TASK))
+    override fun decode(json: JSONObject) = TaskerTaskAction(json.timing(), json.getString(TASK), json.cooldown())
 
     private const val TASK = "task"
 }

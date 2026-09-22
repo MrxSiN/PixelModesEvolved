@@ -4,8 +4,14 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 
-/** The Mode a page shows. */
-data class ModeRef(val id: String, val name: String)
+/**
+ * The Mode a page shows.
+ *
+ * @property hasSchedule whether Android's own time or calendar schedule also drives this Mode.
+ * A schedule and this module's triggers both switch the Mode, and at a schedule boundary the
+ * schedule wins, so the trigger rows say so rather than letting it look like a bug.
+ */
+data class ModeRef(val id: String, val name: String, val hasSchedule: Boolean = false)
 
 /** One part this module adds to a Mode's page. */
 interface ModePageSection {

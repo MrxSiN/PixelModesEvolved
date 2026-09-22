@@ -5,6 +5,8 @@ import android.app.Application
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
+import my.github.MrxSiN.modeevolved.core.Feature
+import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
 
 /**
@@ -15,12 +17,13 @@ import my.github.MrxSiN.modeevolved.core.Logger
  */
 class ApplicationStartHooks(
     private val xposed: XposedInterface,
+    private val features: FeatureInstaller,
     private val logger: Logger,
     private val onStarted: (Application) -> Unit,
 ) {
 
     fun install() {
-        runCatching {
+        features.install(Feature.SETTINGS_RESTART) {
             xposed.hook(Application::class.java.getDeclaredMethod("onCreate")).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
                 val result = chain.proceed()
                 runCatching { onStarted(chain.thisObject as Application) }
@@ -28,7 +31,5 @@ class ApplicationStartHooks(
                 result
             }
         }
-            .onSuccess { logger.info("Hooked app start") }
-            .onFailure { logger.warn("Could not hook app start", it) }
     }
 }

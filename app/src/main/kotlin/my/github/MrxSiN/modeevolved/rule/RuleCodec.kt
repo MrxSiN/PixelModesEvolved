@@ -19,7 +19,10 @@ class RuleCodec(val triggers: KindCodec<Trigger>) : ModeMapCodec<ModeRule>() {
     override fun encodeOne(list: ModeRule): JSONObject {
         val stored = JSONArray()
         list.triggers.forEach { stored.put(triggers.encode(it)) }
-        return JSONObject().put(TRIGGERS, stored).put(JOINS, JSONArray(list.joins.map { it.name }))
+        return JSONObject()
+            .put(TRIGGERS, stored)
+            .put(JOINS, JSONArray(list.joins.map { it.name }))
+            .put(STABILITY, list.stabilityMillis)
     }
 
     /**
@@ -38,7 +41,8 @@ class RuleCodec(val triggers: KindCodec<Trigger>) : ModeMapCodec<ModeRule>() {
             if (kept.isNotEmpty()) keptJoins += joins[index - 1]
             kept += trigger
         }
-        return ModeRule(modeId, kept, keptJoins)
+        // Absent in rules stored before waiting existed, which switched straight away.
+        return ModeRule(modeId, kept, keptJoins, json.optLong(STABILITY, 0L).coerceAtLeast(0L))
     }
 
     /** Rules stored before joins existed said "match": "ALL" or "ANY" for every gap at once. */
@@ -48,6 +52,7 @@ class RuleCodec(val triggers: KindCodec<Trigger>) : ModeMapCodec<ModeRule>() {
     companion object {
         private const val TRIGGERS = "triggers"
         private const val JOINS = "joins"
+        private const val STABILITY = "stability"
         private const val LEGACY_MATCH = "match"
 
         fun standard(): RuleCodec = RuleCodec(

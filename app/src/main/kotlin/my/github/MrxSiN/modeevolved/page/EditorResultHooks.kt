@@ -9,7 +9,10 @@ import io.github.libxposed.api.XposedInterface.ExceptionMode
 
 import my.github.MrxSiN.modeevolved.calendar.CalendarConditionFilter
 import my.github.MrxSiN.modeevolved.calendar.CalendarEventCodec
+import my.github.MrxSiN.modeevolved.core.Feature
+import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
 import my.github.MrxSiN.modeevolved.editor.EditorIntents
 import my.github.MrxSiN.modeevolved.editor.EditorResult
 import my.github.MrxSiN.modeevolved.editor.EditorSubject
@@ -27,19 +30,22 @@ import my.github.MrxSiN.modeevolved.editor.ItemFamilies
 @SuppressLint("PrivateApi")
 class EditorResultHooks(
     private val xposed: XposedInterface,
-    private val classLoader: ClassLoader,
+    private val classes: ClassFinder,
+    private val features: FeatureInstaller,
     private val logger: Logger,
 ) {
 
     fun install() {
-        runCatching {
-            val activity = classLoader.loadClass(SETTINGS_ACTIVITY)
-            val onActivityResult = activity.getDeclaredMethod(
-                "onActivityResult",
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType,
-                Intent::class.java,
-            )
+        features.install(Feature.EDITOR_RESULTS) {
+            val activity = classes.load(SETTINGS_ACTIVITY)
+            val onActivityResult = classes.member("SettingsActivity.onActivityResult(int, int, Intent)") {
+                activity.getDeclaredMethod(
+                    "onActivityResult",
+                    Int::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType,
+                    Intent::class.java,
+                )
+            }
             xposed.hook(onActivityResult).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
                 val subject = EditorSubject.ofRequest(chain.args[0] as Int) ?: return@intercept chain.proceed()
                 runCatching { store(subject, chain.thisObject as Activity, chain.args[1] as Int, chain.args[2] as Intent?) }
@@ -47,8 +53,6 @@ class EditorResultHooks(
                 null
             }
         }
-            .onSuccess { logger.info("Hooked editor results") }
-            .onFailure { logger.warn("Could not hook editor results", it) }
     }
 
     private fun store(subject: EditorSubject, activity: Activity, resultCode: Int, data: Intent?) {

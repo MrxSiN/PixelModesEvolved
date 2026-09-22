@@ -85,6 +85,7 @@ data class RowPosition(val isFirst: Boolean, val isLast: Boolean)
  *
  * @param selected shows a radio button when not null.
  * @param leading drawn in place of [icon], for images that are not resources.
+ * @param trailing drawn in place of the radio button, for a switch or another control.
  */
 @Composable
 fun SectionRow(
@@ -95,6 +96,7 @@ fun SectionRow(
     icon: Int? = null,
     selected: Boolean? = null,
     leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -134,7 +136,10 @@ fun SectionRow(
                     )
                 }
             }
-            if (selected != null) RadioButton(selected = selected, onClick = null)
+            when {
+                trailing != null -> trailing()
+                selected != null -> RadioButton(selected = selected, onClick = null)
+            }
         }
     }
 }

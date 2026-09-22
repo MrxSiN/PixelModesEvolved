@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -32,12 +34,15 @@ import kotlinx.coroutines.withContext
 
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.action.BroadcastAction
+import my.github.MrxSiN.modeevolved.action.IntentActions
 import my.github.MrxSiN.modeevolved.action.LaunchAppAction
 import my.github.MrxSiN.modeevolved.action.ModeAction
 import my.github.MrxSiN.modeevolved.action.TaskerTaskAction
 import my.github.MrxSiN.modeevolved.action.Timing
 import my.github.MrxSiN.modeevolved.editor.EditorFacts
 import my.github.MrxSiN.modeevolved.presentation.BroadcastPresentation
+import my.github.MrxSiN.modeevolved.presentation.Cooldowns
+import my.github.MrxSiN.modeevolved.presentation.Durations
 import my.github.MrxSiN.modeevolved.presentation.LaunchAppPresentation
 import my.github.MrxSiN.modeevolved.presentation.TaskerTaskPresentation
 import my.github.MrxSiN.modeevolved.presentation.Timings
@@ -53,10 +58,13 @@ object LaunchAppEditor : KindEditor<ModeAction> {
     override fun Content(facts: EditorFacts, initial: ModeAction?, onChange: (ModeAction?) -> Unit) {
         val original = initial as? LaunchAppAction
         var timing by rememberSaveable { mutableStateOf(original?.timing ?: Timing.START) }
+        var cooldown by rememberSaveable { mutableStateOf(original?.cooldownMillis ?: 0L) }
         var packageName by rememberSaveable { mutableStateOf(original?.packageName) }
         var label by rememberSaveable { mutableStateOf(original?.label.orEmpty()) }
         var query by rememberSaveable { mutableStateOf("") }
-        LaunchedEffect(timing, packageName, label) { onChange(packageName?.let { LaunchAppAction(timing, it, label) }) }
+        LaunchedEffect(timing, cooldown, packageName, label) {
+            onChange(packageName?.let { LaunchAppAction(timing, it, label, cooldown) })
+        }
 
         TimingChoice(timing) { timing = it }
 
@@ -83,6 +91,7 @@ object LaunchAppEditor : KindEditor<ModeAction> {
                 }
             }
         }
+        CooldownChoice(cooldown) { cooldown = it }
     }
 
     @Composable
@@ -119,7 +128,14 @@ object LaunchAppEditor : KindEditor<ModeAction> {
     private const val ICON_PIXELS = 120
 }
 
-/** Name an intent action to broadcast, for Tasker's "Intent Received" or any other listener. */
+/**
+ * Name an intent action to broadcast, for Tasker's "Intent Received" or any other listener.
+ *
+ * The broadcast leaves system_server, so receivers see the system process as its
+ * sender. Two things follow, and both are enforced here and again before sending:
+ * the action name must be one of your own rather than one the platform defines,
+ * and it goes to one named package unless the advanced switch widens it.
+ */
 object BroadcastEditor : KindEditor<ModeAction> {
 
     override val presentation = BroadcastPresentation
@@ -128,10 +144,19 @@ object BroadcastEditor : KindEditor<ModeAction> {
     override fun Content(facts: EditorFacts, initial: ModeAction?, onChange: (ModeAction?) -> Unit) {
         val original = initial as? BroadcastAction
         var timing by rememberSaveable { mutableStateOf(original?.timing ?: Timing.START) }
+        var cooldown by rememberSaveable { mutableStateOf(original?.cooldownMillis ?: 0L) }
         var action by rememberSaveable { mutableStateOf(original?.intentAction ?: DEFAULT_ACTION) }
         var packageName by rememberSaveable { mutableStateOf(original?.packageName.orEmpty()) }
-        LaunchedEffect(timing, action, packageName) {
-            onChange(action.trim().takeIf { it.isNotEmpty() }?.let { BroadcastAction(timing, it, packageName.trim().ifEmpty { null }) })
+        // An action stored without a package was saved with this switch on, so it comes back on.
+        var anyApp by rememberSaveable { mutableStateOf(original != null && original.packageName == null) }
+
+        val trimmedAction = action.trim()
+        val trimmedPackage = packageName.trim()
+        val actionIsUsable = IntentActions.isSendable(trimmedAction)
+        LaunchedEffect(timing, cooldown, trimmedAction, trimmedPackage, anyApp, actionIsUsable) {
+            val target = trimmedPackage.takeIf { it.isNotEmpty() && !anyApp }
+            val complete = actionIsUsable && (anyApp || target != null)
+            onChange(if (complete) BroadcastAction(timing, trimmedAction, target, cooldown) else null)
         }
 
         TimingChoice(timing) { timing = it }
@@ -141,19 +166,34 @@ object BroadcastEditor : KindEditor<ModeAction> {
                 value = action,
                 onValueChange = { action = it },
                 label = { Text(stringResource(R.string.action_broadcast_action)) },
+                isError = trimmedAction.isNotEmpty() && !actionIsUsable,
+                supportingText = if (trimmedAction.isEmpty() || actionIsUsable) null else {
+                    { Text(stringResource(R.string.action_broadcast_invalid)) }
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
-                value = packageName,
-                onValueChange = { packageName = it },
-                label = { Text(stringResource(R.string.action_broadcast_package)) },
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            if (!anyApp) {
+                OutlinedTextField(
+                    value = packageName,
+                    onValueChange = { packageName = it },
+                    label = { Text(stringResource(R.string.action_broadcast_package)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+        }
+        Section(stringResource(R.string.action_broadcast_advanced)) {
+            SwitchRow(
+                title = stringResource(R.string.action_broadcast_any_app),
+                supporting = stringResource(R.string.action_broadcast_any_app_warning),
+                checked = anyApp,
+                onCheckedChange = { anyApp = it },
             )
         }
+        CooldownChoice(cooldown) { cooldown = it }
         Note(stringResource(R.string.action_broadcast_note))
     }
 
@@ -169,8 +209,11 @@ object TaskerTaskEditor : KindEditor<ModeAction> {
     override fun Content(facts: EditorFacts, initial: ModeAction?, onChange: (ModeAction?) -> Unit) {
         val original = initial as? TaskerTaskAction
         var timing by rememberSaveable { mutableStateOf(original?.timing ?: Timing.START) }
+        var cooldown by rememberSaveable { mutableStateOf(original?.cooldownMillis ?: 0L) }
         var task by rememberSaveable { mutableStateOf(original?.taskName.orEmpty()) }
-        LaunchedEffect(timing, task) { onChange(task.trim().takeIf { it.isNotEmpty() }?.let { TaskerTaskAction(timing, it) }) }
+        LaunchedEffect(timing, cooldown, task) {
+            onChange(task.trim().takeIf { it.isNotEmpty() }?.let { TaskerTaskAction(timing, it, cooldown) })
+        }
 
         TimingChoice(timing) { timing = it }
 
@@ -197,6 +240,7 @@ object TaskerTaskEditor : KindEditor<ModeAction> {
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        CooldownChoice(cooldown) { cooldown = it }
         Note(stringResource(R.string.action_tasker_note))
     }
 }
@@ -208,4 +252,46 @@ object TaskerTaskEditor : KindEditor<ModeAction> {
 @Composable
 fun TimingChoice(timing: Timing, onChoose: (Timing) -> Unit) {
     ConnectedChoice(Timing.entries, timing, onChoose) { stringResource(Timings.labelOf(it)) }
+}
+
+/**
+ * The least time between two runs of this action, shared by every kind of action.
+ *
+ * A Mode changes for reasons this module never sees — a schedule boundary,
+ * Quick Settings, another app — and without a cooldown each of those opens the
+ * app or runs the task again.
+ */
+@Composable
+fun CooldownChoice(cooldownMillis: Long, onChoose: (Long) -> Unit) {
+    Section(stringResource(R.string.action_cooldown)) {
+        Cooldowns.offered.forEachIndexed { index, millis ->
+            SectionRow(
+                title = cooldownLabel(millis),
+                position = positionAt(index, Cooldowns.offered.size),
+                selected = cooldownMillis == millis,
+                onClick = { onChoose(millis) },
+            )
+        }
+    }
+    Note(stringResource(R.string.action_cooldown_note))
+}
+
+@Composable
+private fun cooldownLabel(millis: Long): String {
+    if (millis <= 0L) return stringResource(R.string.cooldown_none)
+    val label = Durations.label(millis)
+    val wording = if (label.seconds) R.plurals.cooldown_seconds else R.plurals.cooldown_minutes
+    return pluralStringResource(wording, label.amount, label.amount)
+}
+
+/** A row with a switch on its trailing edge, drawn like the other rows in a section. */
+@Composable
+private fun SectionScope.SwitchRow(title: String, supporting: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    SectionRow(
+        title = title,
+        supporting = supporting,
+        position = positionAt(0, 1),
+        onClick = { onCheckedChange(!checked) },
+        trailing = { Switch(checked = checked, onCheckedChange = null) },
+    )
 }

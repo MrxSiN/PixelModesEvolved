@@ -36,6 +36,16 @@
             android:exported="true"
             android:theme="@style/Theme.ModeEvolved.Editor"
             android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            Exported because the Modes list in Settings opens it. It checks that the
+            caller is Settings itself and closes for anyone else.
+        -->
+        <activity
+            android:name=".diagnostics.DiagnosticsActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:exported="true"
+            android:theme="@style/Theme.ModeEvolved.Editor" />
     </application>
 
 </manifest>

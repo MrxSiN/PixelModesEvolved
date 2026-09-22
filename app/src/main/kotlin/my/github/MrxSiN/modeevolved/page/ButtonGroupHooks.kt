@@ -9,7 +9,11 @@ import android.widget.Button
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
+import my.github.MrxSiN.modeevolved.core.Feature
+import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
+import my.github.MrxSiN.modeevolved.dex.SettingsClasses
 
 /**
  * Draws this module's connected button groups as text buttons inside the card.
@@ -33,15 +37,14 @@ import my.github.MrxSiN.modeevolved.core.Logger
 @SuppressLint("PrivateApi", "DiscouragedApi")
 class ButtonGroupHooks(
     private val xposed: XposedInterface,
-    private val classLoader: ClassLoader,
+    private val classes: ClassFinder,
     private val keyPrefix: String,
+    private val features: FeatureInstaller,
     private val logger: Logger,
 ) {
 
     fun install() {
-        runCatching(::hook)
-            .onSuccess { logger.info("Hooked button groups") }
-            .onFailure { logger.warn("Could not hook button groups", it) }
+        features.install(Feature.BUTTON_GROUP, ::hook)
     }
 
     private fun hook() {
@@ -50,11 +53,13 @@ class ButtonGroupHooks(
     }
 
     private fun hookGrouping() {
-        val adapter = classLoader.loadClass(GROUP_ADAPTER)
-        val preferenceType = classLoader.loadClass(PREFERENCE)
-        val isGroupDivider = adapter.getDeclaredMethod("isGroupDivider", preferenceType)
-        val getKey = preferenceType.getMethod("getKey")
-        val segmented = classLoader.loadClass(SEGMENTED_PREFERENCE)
+        val adapter = classes.load(GROUP_ADAPTER)
+        val preferenceType = classes.load(PREFERENCE)
+        val isGroupDivider = classes.member("PreferenceGroupAdapter.isGroupDivider(Preference)") {
+            adapter.getDeclaredMethod("isGroupDivider", preferenceType)
+        }
+        val getKey = classes.member("Preference.getKey()") { preferenceType.getMethod("getKey") }
+        val segmented = classes.find(SettingsClasses.segmentedButton)
 
         xposed.hook(isGroupDivider).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
             val preference = chain.args[0]
@@ -67,12 +72,16 @@ class ButtonGroupHooks(
     }
 
     private fun hookBinding() {
-        val preference = classLoader.loadClass(SEGMENTED_PREFERENCE)
-        val holderType = classLoader.loadClass(VIEW_HOLDER)
-        val onBind = preference.getDeclaredMethod("onBindViewHolder", holderType)
-        val getKey = preference.getMethod("getKey")
-        val itemView = holderType.getField("itemView")
-        val setIcon = classLoader.loadClass(MATERIAL_BUTTON).getMethod("setIcon", Drawable::class.java)
+        val preference = classes.find(SettingsClasses.segmentedButton)
+        val holderType = classes.load(VIEW_HOLDER)
+        val onBind = classes.member("SegmentedButtonPreference.onBindViewHolder(ViewHolder)") {
+            preference.getDeclaredMethod("onBindViewHolder", holderType)
+        }
+        val getKey = classes.member("Preference.getKey()") { preference.getMethod("getKey") }
+        val itemView = classes.member("PreferenceViewHolder.itemView") { holderType.getField("itemView") }
+        val setIcon = classes.member("MaterialButton.setIcon(Drawable)") {
+            classes.load(MATERIAL_BUTTON).getMethod("setIcon", Drawable::class.java)
+        }
 
         xposed.hook(onBind).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
             val result = chain.proceed()
@@ -105,7 +114,6 @@ class ButtonGroupHooks(
         view.resources.getIdentifier(name, "id", view.context.packageName)
 
     private companion object {
-        const val SEGMENTED_PREFERENCE = "com.android.settingslib.widget.SegmentedButtonPreference"
         const val GROUP_ADAPTER = "com.android.settingslib.widget.SettingsPreferenceGroupAdapter"
         const val PREFERENCE = "androidx.preference.Preference"
         const val VIEW_HOLDER = "androidx.preference.PreferenceViewHolder"

@@ -11,11 +11,14 @@ import my.github.MrxSiN.modeevolved.store.ModeItems
  *
  * @property modeId the automatic zen rule id, which survives renaming the Mode.
  * @property joins one join per gap, so always one fewer than [triggers].
+ * @property stabilityMillis how long the answer must hold before the Mode is switched,
+ * so a reconnecting headset or a wandering position fix does not switch it twice. Zero switches at once.
  */
 data class ModeRule(
     override val modeId: String,
     val triggers: List<Trigger> = emptyList(),
     val joins: List<Join> = List((triggers.size - 1).coerceAtLeast(0)) { Join.AND },
+    val stabilityMillis: Long = 0L,
 ) : ModeItems<ModeRule, Trigger> {
 
     override val items: List<Trigger> get() = triggers
@@ -24,6 +27,7 @@ data class ModeRule(
         require(joins.size == (triggers.size - 1).coerceAtLeast(0)) {
             "${triggers.size} triggers need ${triggers.size - 1} joins, not ${joins.size}"
         }
+        require(stabilityMillis >= 0) { "A rule cannot wait $stabilityMillis ms" }
     }
 
     enum class Join { AND, OR }
@@ -42,8 +46,16 @@ data class ModeRule(
             return groups
         }
 
+    /**
+     * Whether the joins make the rule met, given [met] for each trigger.
+     *
+     * Separate from [isMetBy] because a trigger that resists flapping needs its
+     * own previous answer, which only the caller keeps.
+     */
+    fun isMetWhen(met: (Trigger) -> Boolean): Boolean = groups.any { group -> group.all(met) }
+
     /** A rule without triggers is never met, so an unfinished rule does nothing. */
-    fun isMetBy(state: DeviceState): Boolean = groups.any { group -> group.all { it.isMetBy(state) } }
+    fun isMetBy(state: DeviceState): Boolean = isMetWhen { it.isMetBy(state) }
 
     /** Adds [item] at the end, joined with `and`. A trigger the rule already has is not added twice. */
     override fun plus(item: Trigger): ModeRule = when {
@@ -86,4 +98,7 @@ data class ModeRule(
     /** Sets the join between trigger [index] and the next one. */
     fun withJoin(index: Int, join: Join): ModeRule =
         copy(joins = joins.toMutableList().apply { set(index, join) })
+
+    /** Sets how long the answer must hold before the Mode is switched. */
+    fun withStability(millis: Long): ModeRule = copy(stabilityMillis = millis)
 }

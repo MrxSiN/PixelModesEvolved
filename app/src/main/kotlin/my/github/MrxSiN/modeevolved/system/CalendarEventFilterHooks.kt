@@ -13,31 +13,41 @@ import io.github.libxposed.api.XposedInterface.ExceptionMode
 
 import my.github.MrxSiN.modeevolved.calendar.CalendarConditionFilter
 import my.github.MrxSiN.modeevolved.calendar.EventFilter
+import my.github.MrxSiN.modeevolved.core.Feature
+import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
 
 /** Narrows Android's stock calendar condition to the [EventFilter] embedded by Settings. */
 @SuppressLint("PrivateApi", "SoonBlockedPrivateApi")
 class CalendarEventFilterHooks(
     private val xposed: XposedInterface,
-    private val classLoader: ClassLoader,
+    private val classes: ClassFinder,
+    private val features: FeatureInstaller,
     private val logger: Logger,
 ) {
 
     private val filters = Collections.synchronizedMap(WeakHashMap<Any, EventFilter>())
 
     fun install() {
-        runCatching {
-            val config = classLoader.loadClass("android.service.notification.ZenModeConfig")
-            val eventInfo = classLoader.loadClass("android.service.notification.ZenModeConfig\$EventInfo")
-            val parse = config.getDeclaredMethod("tryParseEventConditionId", Uri::class.java)
-            val tracker = classLoader.loadClass("com.android.server.modes.CalendarTracker")
-            val userContext = tracker.getDeclaredField("mUserContext").apply { isAccessible = true }
-            val meetsAttendee = tracker.getDeclaredMethod(
-                "meetsAttendee",
-                eventInfo,
-                Int::class.javaPrimitiveType,
-                String::class.java,
-            )
+        features.install(Feature.CALENDAR_FILTER) {
+            val config = classes.load("android.service.notification.ZenModeConfig")
+            val eventInfo = classes.load("android.service.notification.ZenModeConfig\$EventInfo")
+            val parse = classes.member("ZenModeConfig.tryParseEventConditionId(Uri)") {
+                config.getDeclaredMethod("tryParseEventConditionId", Uri::class.java)
+            }
+            val tracker = classes.load("com.android.server.modes.CalendarTracker")
+            val userContext = classes.member("CalendarTracker.mUserContext") {
+                tracker.getDeclaredField("mUserContext").apply { isAccessible = true }
+            }
+            val meetsAttendee = classes.member("CalendarTracker.meetsAttendee(EventInfo, int, String)") {
+                tracker.getDeclaredMethod(
+                    "meetsAttendee",
+                    eventInfo,
+                    Int::class.javaPrimitiveType,
+                    String::class.java,
+                )
+            }
 
             xposed.hook(parse).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
                 val parsed = chain.proceed()
@@ -52,8 +62,6 @@ class CalendarEventFilterHooks(
                 if (filter.matches(eventId) { titleOf(context, eventId) }) chain.proceed() else false
             }
         }
-            .onSuccess { logger.info("Hooked stock calendar event filter") }
-            .onFailure { logger.warn("Could not hook stock calendar event filter", it) }
     }
 
     /** The event's title, read as the user whose calendar the tracker watches. */

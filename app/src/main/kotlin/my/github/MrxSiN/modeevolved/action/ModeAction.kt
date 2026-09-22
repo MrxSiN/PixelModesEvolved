@@ -10,23 +10,45 @@ enum class Timing { START, END }
  *
  * A new kind of action is a new implementation of this interface, added beside
  * the others with its own stored kind, presentation, editor and runner.
+ *
+ * @property cooldownMillis the least time between two runs of this action. A Mode can
+ * legitimately change several times in a minute — a headset reconnecting, a position fix
+ * wandering — and without a cooldown each change opens the app again. Zero runs every time.
  */
 interface ModeAction {
     val timing: Timing
+    val cooldownMillis: Long
 }
 
 /** Opens the app [packageName]. [label] is what the app was called when chosen, kept for display only. */
-data class LaunchAppAction(override val timing: Timing, val packageName: String, val label: String) : ModeAction
+data class LaunchAppAction(
+    override val timing: Timing,
+    val packageName: String,
+    val label: String,
+    override val cooldownMillis: Long = 0L,
+) : ModeAction
 
 /**
- * Sends a broadcast with [intentAction], optionally to [packageName] only.
+ * Sends a broadcast with [intentAction], to [packageName] only unless it is null.
  *
  * Automation apps listen for these: Tasker's "Intent Received" event, for one.
+ * The broadcast leaves system_server, so every receiver sees the system process
+ * as its sender; naming the one package that should get it is the difference
+ * between telling one app and telling the whole phone. See [IntentActions].
  */
-data class BroadcastAction(override val timing: Timing, val intentAction: String, val packageName: String?) : ModeAction
+data class BroadcastAction(
+    override val timing: Timing,
+    val intentAction: String,
+    val packageName: String?,
+    override val cooldownMillis: Long = 0L,
+) : ModeAction
 
 /** Runs the Tasker task named [taskName]. Tasker must allow external access. */
-data class TaskerTaskAction(override val timing: Timing, val taskName: String) : ModeAction
+data class TaskerTaskAction(
+    override val timing: Timing,
+    val taskName: String,
+    override val cooldownMillis: Long = 0L,
+) : ModeAction
 
 /** The actions attached to one Mode, in the order a person added them. */
 data class ModeActions(

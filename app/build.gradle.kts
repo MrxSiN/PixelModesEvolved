@@ -3,7 +3,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersion = "0.0.1"
+val appVersion = "0.0.2"
+
+/*
+ * Vector hot reloads system_server only when the installed versionCode differs from the loaded
+ * one, so every build needs its own. CI passes VERSION_CODE, derived from the commit it is
+ * building, which makes two builds of the same tag produce the same APK. A local build has no
+ * commit to speak of and falls back to the wall clock: seconds since 2026-01-01 UTC.
+ */
+val versionEpochMillis = 1_767_225_600_000L
+val buildVersionCode: Int = System.getenv("VERSION_CODE")?.toIntOrNull()?.takeIf { it > 0 }
+    ?: ((System.currentTimeMillis() - versionEpochMillis) / 1_000L).toInt()
 
 // Release signing key, given by CI (see .github/workflows/android.yml).
 val envKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
@@ -37,9 +47,7 @@ android {
         // Modes, as the automatic zen rules this module drives, are the Android 17 (API 37) ones.
         minSdk = 37
         targetSdk = 37
-        // Vector hot reloads system_server only when the installed versionCode differs from the loaded
-        // one, so every build gets its own: seconds since 2026-01-01 UTC.
-        versionCode = ((System.currentTimeMillis() - 1_767_225_600_000L) / 1_000L).toInt()
+        versionCode = buildVersionCode
         versionName = appVersion
         // The map renderer is native code; phones running Android 17 are arm64.
         ndk {
@@ -82,6 +90,11 @@ android {
             // The Xposed framework discovers modern modules through these files.
             merges += "META-INF/xposed/*"
         }
+        jniLibs {
+            // The dex search runs inside Settings and loads its own native library by path,
+            // which needs the library unpacked on disk rather than compressed inside the APK.
+            useLegacyPackaging = true
+        }
     }
 }
 
@@ -119,6 +132,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.maplibre)
+
+    // Hook side: finds a Settings class again after a quarterly release has moved it.
+    implementation(libs.dexkit)
 
     testImplementation(libs.junit)
     // android.jar only ships stubs of org.json, so unit tests need the real one.

@@ -8,11 +8,13 @@ import android.os.UserHandle
 
 import my.github.MrxSiN.modeevolved.action.ActionRunner
 import my.github.MrxSiN.modeevolved.action.BroadcastAction
+import my.github.MrxSiN.modeevolved.action.IntentActions
 import my.github.MrxSiN.modeevolved.action.LaunchAppAction
 import my.github.MrxSiN.modeevolved.action.ModeAction
 import my.github.MrxSiN.modeevolved.action.TaskerTaskAction
 import my.github.MrxSiN.modeevolved.core.Logger
 import my.github.MrxSiN.modeevolved.core.castOrNull
+import my.github.MrxSiN.modeevolved.dex.ClassFinder
 
 /**
  * Carries out actions from system_server, for the person using the phone.
@@ -25,11 +27,19 @@ import my.github.MrxSiN.modeevolved.core.castOrNull
 class IntentActionRunner(
     private val context: Context,
     private val notifications: NotificationManager,
+    private val classes: ClassFinder,
     private val logger: Logger,
 ) : ActionRunner {
 
     /** `UserHandle.CURRENT`, hidden from the SDK. */
-    private val currentUser = UserHandle::class.java.getField("CURRENT").get(null) as UserHandle
+    private val currentUser = classes.member("UserHandle.CURRENT") {
+        UserHandle::class.java.getField("CURRENT").get(null) as UserHandle
+    }
+
+    /** `Context.startActivityAsUser`, hidden; system_server may start activities for any user. */
+    private val startActivityAsUser = classes.member("Context.startActivityAsUser(Intent, UserHandle)") {
+        Context::class.java.getMethod("startActivityAsUser", Intent::class.java, UserHandle::class.java)
+    }
 
     private val performers = listOf(LaunchApp(), Broadcast(), TaskerTask())
 
@@ -56,14 +66,26 @@ class IntentActionRunner(
             val intent = context.packageManager.getLaunchIntentForPackage(action.packageName)
                 ?: return logger.warn("${action.packageName} cannot be opened")
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            // Context.startActivityAsUser is hidden; system_server may start activities for any user.
-            Context::class.java.getMethod("startActivityAsUser", Intent::class.java, UserHandle::class.java)
-                .invoke(context, intent, currentUser)
+            startActivityAsUser.invoke(context, intent, currentUser)
         }
     }
 
+    /**
+     * Sends the configured broadcast, unless the action name belongs to the platform.
+     *
+     * The send comes from system_server, so receivers see it as the system's own.
+     * [IntentActions] decides what may be sent; the check is repeated here because
+     * what the editor refuses can still reach storage from an older build or from
+     * `adb shell settings put`.
+     */
     private inner class Broadcast : Performer<BroadcastAction>(BroadcastAction::class.java) {
         override fun perform(action: BroadcastAction, change: Change) {
+            if (!IntentActions.isSendable(action.intentAction)) {
+                return logger.warn("Refused to broadcast ${action.intentAction}: the system process may not send that name")
+            }
+            if (action.packageName == null) {
+                logger.info("Broadcasting ${action.intentAction} to every app that listens for it")
+            }
             val intent = Intent(action.intentAction)
                 .putExtra(EXTRA_MODE_ID, change.modeId)
                 .putExtra(EXTRA_MODE_NAME, change.modeName)

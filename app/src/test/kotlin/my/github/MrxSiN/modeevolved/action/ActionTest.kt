@@ -19,9 +19,9 @@ class ActionTest {
                 "work",
                 listOf(
                     LaunchAppAction(Timing.START, "com.example.notes", "Notes"),
-                    BroadcastAction(Timing.END, "com.example.QUIET", "net.dinglisch.android.taskerm"),
+                    BroadcastAction(Timing.END, "com.example.QUIET", "net.dinglisch.android.taskerm", cooldownMillis = 60_000L),
                     BroadcastAction(Timing.START, "com.example.ANY", null),
-                    TaskerTaskAction(Timing.END, "Loud"),
+                    TaskerTaskAction(Timing.END, "Loud", cooldownMillis = 300_000L),
                 ),
             ),
         )
@@ -36,7 +36,7 @@ class ActionTest {
         val quiet = TaskerTaskAction(Timing.END, "Quiet")
         val store = FakeSource(listOf(ModeActions("work", listOf(open, quiet))))
 
-        ActionAutomation(store, states, { action, _, active -> runs += action to active }, DIRECT, SilentLogger).start()
+        automation(store, states) { action, _, active -> runs += action to active }.start()
         assertEquals(emptyList<Pair<ModeAction, Boolean>>(), runs)
 
         states.set("work", true)
@@ -53,7 +53,7 @@ class ActionTest {
         val ran = mutableListOf<ModeAction>()
         val store = FakeSource(listOf(ModeActions("work", listOf(first, second))))
 
-        ActionAutomation(store, states, { action, _, _ -> ran += action; if (action == first) error("boom") }, DIRECT, SilentLogger).start()
+        automation(store, states) { action, _, _ -> ran += action; if (action == first) error("boom") }.start()
         states.set("work", true)
         assertEquals(listOf<ModeAction>(first, second), ran)
     }
@@ -63,13 +63,58 @@ class ActionTest {
         val states = FakeStates(mutableMapOf("work" to false))
         val open = TaskerTaskAction(Timing.START, "Open")
         val ran = mutableListOf<ModeAction>()
-        val automation = ActionAutomation(FakeSource(listOf(ModeActions("work", listOf(open)))), states, { action, _, _ -> ran += action }, DIRECT, SilentLogger)
+        val automation = automation(FakeSource(listOf(ModeActions("work", listOf(open)))), states) { action, _, _ -> ran += action }
 
         automation.start()
         automation.stop()
         states.set("work", true)
         assertEquals(emptyList<ModeAction>(), ran)
     }
+
+    @Test
+    fun `an action inside its cooldown is skipped, and runs again once the cooldown is over`() {
+        val states = FakeStates(mutableMapOf("work" to false))
+        val open = LaunchAppAction(Timing.START, "com.example.notes", "Notes", cooldownMillis = 60_000L)
+        val runs = mutableListOf<Long>()
+        val store = FakeSource(listOf(ModeActions("work", listOf(open))))
+
+        automation(store, states) { _, _, _ -> runs += clock }.start()
+
+        states.set("work", true)
+        assertEquals(listOf(0L), runs)
+
+        // Off and on again half a minute later: a real pair of edges, inside the cooldown.
+        clock = 30_000L
+        states.set("work", false)
+        states.set("work", true)
+        assertEquals(listOf(0L), runs)
+
+        clock = 61_000L
+        states.set("work", false)
+        states.set("work", true)
+        assertEquals(listOf(0L, 61_000L), runs)
+    }
+
+    @Test
+    fun `an action without a cooldown runs on every edge`() {
+        val states = FakeStates(mutableMapOf("work" to false))
+        val open = LaunchAppAction(Timing.START, "com.example.notes", "Notes")
+        var runs = 0
+        val store = FakeSource(listOf(ModeActions("work", listOf(open))))
+
+        automation(store, states) { _, _, _ -> runs++ }.start()
+        repeat(3) {
+            states.set("work", true)
+            states.set("work", false)
+        }
+        assertEquals(3, runs)
+    }
+
+    private fun automation(store: ModeSource<ModeActions>, states: ModeStates, runner: ActionRunner) =
+        ActionAutomation(store, states, runner, DIRECT, { clock }, SilentLogger)
+
+    /** The monotonic clock the automation reads, moved by hand. */
+    private var clock = 0L
 
     private class FakeSource(private val lists: List<ModeActions>) : ModeSource<ModeActions> {
         override fun all() = lists

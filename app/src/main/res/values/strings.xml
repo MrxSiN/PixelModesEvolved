@@ -13,6 +13,74 @@
     <string name="join_or">OR</string>
     <string name="join_tap_to_change">Tap to change</string>
 
+    <!-- How long the triggers must keep saying the same thing before the mode is switched. -->
+    <string name="stability_title">Wait before switching</string>
+    <string name="stability_none">Switch straight away</string>
+    <string name="stability_summary">%1$s · Tap to change</string>
+    <plurals name="duration_seconds">
+        <item quantity="one">Wait %1$d second</item>
+        <item quantity="other">Wait %1$d seconds</item>
+    </plurals>
+    <plurals name="duration_minutes">
+        <item quantity="one">Wait %1$d minute</item>
+        <item quantity="other">Wait %1$d minutes</item>
+    </plurals>
+
+    <!-- Shown under the triggers when Android's own schedule drives the same mode. -->
+    <string name="schedule_conflict_title">This mode also has a schedule</string>
+    <string name="schedule_conflict_summary">Android switches this mode on its schedule as well, and at the start and end of the schedule the schedule wins over these triggers. Remove the schedule to let the triggers decide alone.</string>
+
+    <!-- Compatibility & diagnostics: which of this module's hooks the running Android build still allows. -->
+    <string name="diagnostics_title">Compatibility &amp; diagnostics</string>
+    <string name="diagnostics_all_ok">%1$d features, %2$d hooks · all resolved</string>
+    <string name="diagnostics_some_failed">%1$d check(s) failed · Tap for details</string>
+    <string name="diagnostics_pending">Not checked yet. Reboot, or reopen Settings after enabling the module.</string>
+
+    <string name="diagnostics_module">Module</string>
+    <string name="diagnostics_active">Active</string>
+    <string name="diagnostics_inactive">Not running</string>
+    <string name="diagnostics_version">Version</string>
+
+    <string name="diagnostics_system">System</string>
+    <string name="diagnostics_android">Android</string>
+    <string name="diagnostics_android_value">%1$s (SDK %2$d)</string>
+    <string name="diagnostics_build">Build</string>
+    <string name="diagnostics_settings">Settings</string>
+    <string name="diagnostics_api">libxposed API</string>
+    <string name="diagnostics_framework">Framework</string>
+    <string name="diagnostics_root">Root</string>
+    <string name="diagnostics_granted">Granted</string>
+    <string name="diagnostics_denied">Not granted</string>
+
+    <string name="diagnostics_features">Feature compatibility</string>
+    <string name="diagnostics_feature_ok">Supported on this build. All required hooks resolved.</string>
+    <string name="diagnostics_compatible">Compatible</string>
+    <string name="diagnostics_unavailable">Unavailable</string>
+
+    <string name="diagnostics_hooks">Hooks</string>
+    <string name="diagnostics_resolved">Resolved</string>
+    <string name="diagnostics_by_signature">Found by signature</string>
+    <string name="diagnostics_failed">Failed</string>
+
+    <string name="diagnostics_contracts">Settings and system contracts</string>
+    <string name="diagnostics_renamed">Renamed</string>
+
+    <string name="diagnostics_report">Report</string>
+    <string name="diagnostics_copy">Copy compatibility report</string>
+    <string name="diagnostics_copy_hint">For a bug report after an Android update</string>
+
+    <string name="feature_mode_page">Mode page rows</string>
+    <string name="feature_modes_list">Modes list row</string>
+    <string name="feature_editor_results">Saving what the editor returns</string>
+    <string name="feature_button_group">AND / OR button group</string>
+    <string name="feature_calendar_row">Event row on Calendar events</string>
+    <string name="feature_schedule_removal">Remove schedule button</string>
+    <string name="feature_settings_restart">Settings restart after an update</string>
+    <string name="feature_automation_start">Automation start at boot</string>
+    <string name="feature_calendar_filter">Calendar event filter</string>
+    <string name="feature_trigger_automation">Triggers</string>
+    <string name="feature_action_automation">Mode actions</string>
+
     <!-- Editor. -->
     <string name="editor_add_title">Add a trigger</string>
     <string name="editor_add_intro">Choose what turns this mode on. It turns off again when the trigger stops being met.</string>
@@ -102,6 +170,19 @@
     <string name="actions_remove_title">Remove action?</string>
     <string name="actions_remove_text">This will no longer run when %1$s changes.</string>
 
+    <!-- The least time between two runs of one action. -->
+    <string name="action_cooldown">Run at most once every</string>
+    <string name="cooldown_none">Every time</string>
+    <plurals name="cooldown_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <plurals name="cooldown_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <string name="action_cooldown_note">A mode can change several times in a minute — a headset reconnecting, a schedule boundary, Quick Settings. A cooldown keeps this action from running again each time.</string>
+
     <string name="timing_start">Turns on</string>
     <string name="timing_end">Turns off</string>
     <string name="timing_start_summary">When this mode turns on · Tap to edit</string>
@@ -118,8 +199,12 @@
     <string name="action_broadcast_summary">Send %1$s</string>
     <string name="action_broadcast_intent">Intent</string>
     <string name="action_broadcast_action">Action</string>
-    <string name="action_broadcast_package">Only to package (optional)</string>
+    <string name="action_broadcast_package">Package to send it to</string>
     <string name="action_broadcast_note">The broadcast carries the extras mode_id, mode_name and mode_active. In Tasker, catch it with Event › System › Intent Received, using the same action.</string>
+    <string name="action_broadcast_invalid">Use an action name of your own, such as com.example.modes.CHANGED. Names beginning with android. or com.android. belong to the system and are refused.</string>
+    <string name="action_broadcast_advanced">Advanced</string>
+    <string name="action_broadcast_any_app">Send to every app that listens</string>
+    <string name="action_broadcast_any_app_warning">This broadcast is sent by the system process, so every app receiving it sees Android itself as the sender. Leave this off and name one package unless you know why it has to reach further.</string>
 
     <string name="action_tasker">Run a Tasker task</string>
     <string name="action_tasker_hint">Runs one of your Tasker tasks by name</string>

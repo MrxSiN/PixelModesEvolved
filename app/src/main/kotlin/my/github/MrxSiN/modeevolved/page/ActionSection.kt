@@ -57,11 +57,11 @@ class ActionSection(
         )
     }
 
-    private companion object {
+    companion object {
         /** Starts like every key this module adds, so Settings hooks recognise the whole card as this module's. */
         const val CATEGORY = "${TriggerSection.KEY_PREFIX}actions"
 
-        const val KEY_PREFIX = "${TriggerSection.KEY_PREFIX}actions_"
-        const val ADD_KEY = "${KEY_PREFIX}add"
+        private const val KEY_PREFIX = "${TriggerSection.KEY_PREFIX}actions_"
+        private const val ADD_KEY = "${KEY_PREFIX}add"
     }
 }

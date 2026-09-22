@@ -20,9 +20,9 @@ Settings → Modes → *a Mode* → **Mode settings**, under "Set a schedule".
 ---
 
 > [!WARNING]
-> **Alpha.** This is an early release. It hooks Settings and system_server, and it has been
-> tested on one device: a Pixel 8 Pro on **Android 17 QPR1, September 2026**
-> (`CP3A.260905.009`). Expect rough edges, and keep a way to recover your phone.
+> **Alpha.** This is an early release. It hooks Settings and system_server. See the
+> [compatibility matrix](#compatibility) for what has actually been tested on what.
+> Expect rough edges, and keep a way to recover your phone.
 
 ## Why it works this way
 
@@ -57,13 +57,19 @@ when the triggers stop being met.
 | **Bluetooth device** | a paired device is connected | connect and disconnect broadcasts |
 | **Location** | inside a circle around a place | the fused provider, balanced power, about every 5 minutes |
 | **Movement: on the move** | the phone is moving | the significant motion sensor, one-shot and low power |
-| **Movement: left still** | the phone has not moved for 10 minutes | the same sensor |
+| **Movement: left still** | the phone has not moved for 10 minutes, counted from when the rule starts | the same sensor |
 | **Movement: flying** | on board an aircraft in flight | high-accuracy fixes every 3 minutes: speed and altitude |
 | **Airplane mode** | airplane mode is on, or off | the `airplane_mode_on` setting |
 
 Triggers are joined in order by **AND** or **OR**, with a connected button group between each
 pair. As in ordinary logic, AND binds before OR: `Home Wi-Fi AND left still OR Car` means
 `(Home Wi-Fi AND left still) OR Car`. A new trigger joins with AND.
+
+Under the triggers sits **Wait before switching**: how long they must keep saying the same thing
+before the Mode is actually switched. Wi-Fi roaming between two access points, a headset
+reconnecting and a position fix wandering along a boundary all produce real edges, and without a
+wait each of them switches the Mode and runs its actions. Thirty seconds covers most of it.
+Saving a trigger still applies at once — that is you, not a noisy signal.
 
 <table>
 <tr>
@@ -109,8 +115,27 @@ chooses **Turns on** or **Turns off** for each action.
 | Action | What it does |
 |---|---|
 | **Open an app** | Opens an installed app on the screen. |
-| **Send an intent** | Broadcasts an intent action, optionally to one package, with the extras `mode_id`, `mode_name` and `mode_active`. In Tasker, catch it with *Event › System › Intent Received*. |
+| **Send an intent** | Broadcasts an intent action to one named package, with the extras `mode_id`, `mode_name` and `mode_active`. In Tasker, catch it with *Event › System › Intent Received*. |
 | **Run a Tasker task** | Runs one of your Tasker tasks by name; the editor lists them. Tasker needs *Preferences › Misc › Allow External Access*. |
+
+Each action also has a **cooldown**: the least time between two runs of it. A Mode can change
+several times in a minute for reasons no trigger caused — a schedule boundary, Quick Settings,
+another app — and without a cooldown each change opens the app again.
+
+> [!IMPORTANT]
+> **Send an intent is a privileged action.** The broadcast is sent by system_server, so every
+> receiver sees the system process as its sender and may trust it accordingly. Two rules follow,
+> and both are enforced in the editor and again before the broadcast leaves:
+>
+> - **The action name must be your own.** Anything beginning with `android.`, `com.android.` or
+>   `com.google.android.` is refused, so a Mode cannot make an app believe the platform announced
+>   a boot, a package change or a SIM state. Use something like `com.example.modes.CHANGED`.
+> - **It goes to one named package.** Sending to every app that listens is behind an **Advanced**
+>   switch with a warning, because a system-sent broadcast reaching every installed app is a much
+>   larger thing than telling one automation app.
+>
+> A rule written straight into `Settings.Secure`, or left behind by an older build, is checked
+> the same way before anything is sent.
 
 <table>
 <tr>
@@ -174,16 +199,42 @@ offers "Set a schedule" again. The Mode's settings, triggers and actions stay.
 
 ## Status
 
-**v0.0.1 — alpha.** Compatible with **Android 17 QPR1 (September 2026)**. Hooks reach into
-Settings and system_server internals that can move between Android releases; when one moves, the
-feature that needs it switches itself off and logs why, and the rest keep working.
+**v0.0.2 — alpha.** Hooks reach into Settings and system_server internals that move between
+Android releases. When one moves, the feature that needs it switches itself off, and
+**Compatibility & diagnostics** — at the bottom of the Modes list, under *Create your own
+mode* — says which one went.
 
-Known limits:
+That page reports what this module found when it met the build it is running on: whether it is
+active and at what version, the Android build, Settings version, libxposed API and framework
+under it, each feature with Compatible or Unavailable and the reason, how many of its hooks
+resolved, how many were found by signature after a rename, how many failed — and then every
+class, method and field it depends on, one row each. **Copy compatibility report** puts the
+whole thing on the clipboard for a bug report.
 
-- A scheduled Mode still follows its schedule, which can override a trigger at a schedule
-  boundary. Triggers work best on Modes without a schedule.
+### Compatibility
+
+Each row is one build somebody has actually run this on. If you try another, please open a pull
+request adding a row — that table is worth more than any claim about "Android 17".
+
+| Device | Android build | Vector | Triggers tested | Actions tested | Tester | Date |
+|---|---|---|---|---|---|---|
+| Pixel 8 Pro | 17 QPR1 · `CP3A.260905.009` | 2.2 | Wi-Fi, Bluetooth, location, movement, airplane | Open app, send intent, Tasker | @MrxSiN | 2026-09 |
+
+On a device, `scripts/device.sh health` prints the same self-test the page shows:
+
+```bash
+scripts/device.sh health
+```
+
+### Known limits
+
+- A scheduled Mode still follows its schedule, which overrides a trigger at a schedule boundary.
+  A Mode with both now says so, in a note under its triggers. Triggers work best on Modes without
+  a schedule.
 - After an update is hot reloaded, triggers are judged afresh, as at boot: a met rule switches its
   Mode on, an unmet one leaves it alone.
+- **Left still** and **flying** both start out unknown, so a rule reading them is not met until
+  the signal has decided: ten quiet minutes for still, one position fix for flying.
 
 ## Requirements
 
@@ -248,8 +299,51 @@ back.
 - Saving or editing a trigger applies the rule at once, met or not, and ends a manual override.
   Saving a trigger is an explicit choice.
 - Removing the last trigger of a Mode that the triggers held on turns that Mode off.
+- A rule with a wait holds an edge the signals caused for that long and drops it if the answer
+  comes back. Load and edit never wait.
 
 Location requests are attributed as `android[PixelModesEvolved]`, visible in `adb shell dumpsys location`.
+
+</details>
+
+<details>
+<summary><b>Not acting on what the device no longer knows</b></summary>
+<br>
+
+Three signals used to answer before they knew anything, which switched Modes for a few minutes
+after every boot:
+
+- **Left still** means "has not moved for 10 minutes". At the moment the signal starts nobody
+  knows that yet, so movement begins *unknown* and still is published only once the significant
+  motion sensor has stayed quiet for the full ten minutes. Motion restarts the count.
+- **Position fixes** arrive with the provider's last known one first, which can be hours old.
+  Every fix is weighed against its age and dropped when it is too old: ten minutes for a location
+  rule, two for flight detection, where a speed from before takeoff would start or end a flight at
+  the wrong time.
+- **An area** is judged from a fix that carries its accuracy, not from a bare point. Leaving needs
+  clearing a wider boundary than arriving did — a quarter of the radius, or the fix's own accuracy
+  when that is larger — so a 100 m-accurate fix against a 50 m area settles on one answer instead
+  of flapping across the edge every few minutes.
+
+</details>
+
+<details>
+<summary><b>Surviving a quarterly release</b></summary>
+<br>
+
+Every hook is installed through one guard that records the outcome, and every class, method and
+field it looks for is recorded with it. Each process writes its own half to `Settings.Secure`;
+the Settings app adds them together, because it is the only one that can see the Android build,
+the framework and both halves at once, and hands the whole report to the page.
+
+Classes inside Settings are reached by name first, which costs one `loadClass` on a build that
+matches. When a name has gone, [DexKit](https://github.com/LuckyPray/DexKit) searches that app's
+own dex for a class in the same package declaring the same methods, and the hook carries on with
+whatever it was renamed to. A search that finds more than one candidate finds nothing: hooking
+the wrong class inside Settings is worse than losing one feature.
+
+The search is opened only after a name has actually failed, and closed as soon as it has answered,
+so a matching build never pays for it.
 
 </details>
 
@@ -258,16 +352,18 @@ Location requests are attributed as `android[PixelModesEvolved]`, visible in `ad
 <br>
 
 - **system_server** is hot reloaded by Vector (`autoHotReload=true` in `module.prop`). Vector only
-  reloads when the installed `versionCode` differs from the loaded one, so every build gets its own
-  (seconds since 2026-01-01). The old build stops its automation and hands the system_server class
-  loader and system context to the new one (`SystemServerPart`), which hooks again and restarts the
-  automation at once.
+  reloads when the installed `versionCode` differs from the loaded one, so every build gets its own:
+  seconds since 2026-01-01, taken from the commit's date in CI and from the clock locally, so
+  rebuilding a tag produces the same APK. The old build stops its automation — including any edge
+  still waiting out a rule's stabilization — and hands the system_server class loader and system
+  context to the new one (`SystemServerPart`), which hooks again and restarts the automation at once.
 - **Settings** declines hot reload, since its pages hold views and callbacks of the build that drew
   them. When the module is replaced, Settings stops itself as soon as none of its screens is visible
   (`ModuleUpdateRestarter`), so it opens on the new build next time. It never stops while on screen.
 - For a moment after an update, old hook code in Settings reads the new APK's resources. Resource
   IDs are pinned in `app/resource-ids.txt` (aapt2 `--stable-ids`), so they never shift between
-  builds. Commit that file.
+  builds. **Commit that file**: CI runs `git diff --exit-code -- app/resource-ids.txt` after the
+  release link and fails the build when a new resource left it uncommitted.
 
 </details>
 
@@ -278,6 +374,10 @@ Location requests are attributed as `android[PixelModesEvolved]`, visible in `ad
 ```bash
 ./gradlew testDebugUnitTest lintDebug assembleRelease
 ```
+
+Linking the release refreshes `app/resource-ids.txt`. If it changed, commit it — CI fails the
+build otherwise. Set `VERSION_CODE` to pin the version code; without it a local build uses the
+clock.
 
 Install the release build for daily use. The debug build is about 14 times larger and slow to
 start, because Compose runs unoptimised in it. Release builds are shrunk with R8 and signed with
@@ -302,6 +402,7 @@ Each switch logs `Mode <id> -> on|off`, and each input logs `Signal X: start|sto
 ModeEvolvedModule   Xposed entry: routes system_server and Settings to their parts
 store/              shared storage over Settings.Secure
 trigger/            pure domain: trigger kinds, device state, rules — no Android code
+dex/                finding a hooked class again after a release renamed it
 rule/               rule codec and one TriggerKind per trigger
 action/             Mode actions, their codec, and ActionAutomation
 engine/             TriggerEngine decides, SignalHub runs inputs, ModeAutomation wires them
@@ -310,6 +411,7 @@ system/             system_server: boot and hot reload, Mode switching, action r
 calendar/           the calendar event filter and its codec
 presentation/       label, icon and description per kind, shared by rows and editor
 page/               Settings: Mode page rows, reflection boundaries, editor launch and results
+diagnostics/        the compatibility page and the report the Settings side gathers for it
 editor/             the Compose editor app, one KindEditor per kind
 ```
 

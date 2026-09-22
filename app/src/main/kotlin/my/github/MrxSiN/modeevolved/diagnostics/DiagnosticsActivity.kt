@@ -1,0 +1,71 @@
+package my.github.MrxSiN.modeevolved.diagnostics
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+
+import my.github.MrxSiN.modeevolved.R
+import my.github.MrxSiN.modeevolved.core.Resolution
+import my.github.MrxSiN.modeevolved.editor.ui.EditorTheme
+
+/**
+ * Shows what this module found when it met this Android build.
+ *
+ * Answers only the Settings app, which is the one process that can see both
+ * halves of the report and hands the whole thing over in the intent. Opened any
+ * other way, it closes.
+ */
+class DiagnosticsActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
+
+        val report = intent.getStringExtra(DiagnosticsIntents.EXTRA_REPORT)
+            ?.takeIf { referrer?.host == DiagnosticsIntents.SETTINGS_PACKAGE }
+            ?.let(DiagnosticsReportCodec::decode)
+            ?: return finish()
+
+        setContent {
+            EditorTheme {
+                DiagnosticsScreen(report, onBack = ::finish, onCopy = { copy(report) })
+            }
+        }
+    }
+
+    private fun copy(report: DiagnosticsReport) {
+        val clipboard = getSystemService(ClipboardManager::class.java) ?: return
+        clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.diagnostics_title), asText(report)))
+    }
+
+    /** The report as the plain text a bug report can hold. */
+    private fun asText(report: DiagnosticsReport): String = buildString {
+        appendLine("${getString(R.string.app_name)} ${report.moduleVersion}")
+        appendLine("Android ${report.androidRelease} (SDK ${report.sdkInt}), build ${report.buildId}")
+        if (report.settingsVersion.isNotEmpty()) appendLine("Settings ${report.settingsVersion}")
+        appendLine("${report.frameworkName} ${report.frameworkVersion}, libxposed API ${report.apiVersion}")
+        appendLine()
+        appendLine("Features")
+        for (health in report.features) {
+            append(if (health.ok) "  OK   " else "  FAIL ")
+            append(health.feature.id)
+            health.detail?.let { append(" - ").append(it) }
+            appendLine()
+        }
+        appendLine()
+        appendLine("Hooks: ${report.resolved}/${report.contracts.size} resolved, ${report.bySignature} by signature, ${report.failed} failed")
+        for (contract in report.contracts) {
+            append(
+                when (contract.resolution) {
+                    Resolution.BY_NAME -> "  OK   "
+                    Resolution.BY_SIGNATURE -> "  MOVED"
+                    Resolution.MISSING -> "  FAIL "
+                },
+            )
+            appendLine(contract.name)
+        }
+    }
+}
