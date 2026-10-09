@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.CalendarContract
-import java.util.concurrent.Executors
 
 import my.github.MrxSiN.modeevolved.calendar.CalendarConditionFilter
 import my.github.MrxSiN.modeevolved.calendar.CalendarEventCodec
@@ -16,13 +15,10 @@ import my.github.MrxSiN.modeevolved.editor.EditorIntents
 import my.github.MrxSiN.modeevolved.editor.EditorSubject
 
 /** Reads upcoming events off the UI thread, then opens their expressive picker. */
-class CalendarEventEditorLauncher {
-
-    private val reader = Executors.newSingleThreadExecutor()
+class CalendarEventEditorLauncher(private val opener: EditorOpener) {
 
     fun open(context: Context, mode: ModeRef, condition: Uri) {
-        val activity = context.activity() ?: return
-        reader.execute {
+        opener.open(context, EditorSubject.CALENDAR_EVENT.requestCode) { activity ->
             val filter = CalendarConditionFilter.filterOf(condition)
             val events = upcomingEvents(activity, condition.getQueryParameter(CalendarConditionFilter.CALENDAR_ID)?.toLongOrNull())
                 .toMutableList()
@@ -31,15 +27,10 @@ class CalendarEventEditorLauncher {
                 events.add(0, CalendarEventOption(filter.id, filter.title.ifBlank { "Event ${filter.id}" }, "", 0))
             }
             val input = CalendarEventEditorInput(mode.id, mode.name, filter, events)
-            val intent = Intent()
+            Intent()
                 .setClassName(EditorIntents.PACKAGE, EditorIntents.ACTIVITY)
                 .putExtra(EditorIntents.EXTRA_SUBJECT, EditorSubject.CALENDAR_EVENT.name)
                 .putExtra(EditorIntents.EXTRA_INPUT, CalendarEventCodec.encodeInput(input))
-            activity.runOnUiThread {
-                if (!activity.isFinishing && !activity.isDestroyed) {
-                    activity.startActivityForResult(intent, EditorSubject.CALENDAR_EVENT.requestCode)
-                }
-            }
         }
     }
 

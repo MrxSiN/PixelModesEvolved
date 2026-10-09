@@ -11,10 +11,12 @@ import my.github.MrxSiN.modeevolved.action.BroadcastAction
 import my.github.MrxSiN.modeevolved.action.IntentActions
 import my.github.MrxSiN.modeevolved.action.LaunchAppAction
 import my.github.MrxSiN.modeevolved.action.ModeAction
+import my.github.MrxSiN.modeevolved.action.SendableAction
 import my.github.MrxSiN.modeevolved.action.TaskerTaskAction
+import my.github.MrxSiN.modeevolved.compat.SystemServerApis as SS
 import my.github.MrxSiN.modeevolved.core.Logger
 import my.github.MrxSiN.modeevolved.core.castOrNull
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Carries out actions from system_server, for the person using the phone.
@@ -23,23 +25,16 @@ import my.github.MrxSiN.modeevolved.dex.ClassFinder
  * Broadcasts carry which Mode changed and how, for automation apps to read.
  */
 // system_server holds every permission and may act for the current user.
-@SuppressLint("MissingPermission", "PrivateApi", "DiscouragedPrivateApi", "WrongConstant")
+@SuppressLint("MissingPermission", "WrongConstant")
 class IntentActionRunner(
     private val context: Context,
     private val notifications: NotificationManager,
-    private val classes: ClassFinder,
+    apis: HostResolver,
     private val logger: Logger,
 ) : ActionRunner {
 
-    /** `UserHandle.CURRENT`, hidden from the SDK. */
-    private val currentUser = classes.member("UserHandle.CURRENT") {
-        UserHandle::class.java.getField("CURRENT").get(null) as UserHandle
-    }
-
-    /** `Context.startActivityAsUser`, hidden; system_server may start activities for any user. */
-    private val startActivityAsUser = classes.member("Context.startActivityAsUser(Intent, UserHandle)") {
-        Context::class.java.getMethod("startActivityAsUser", Intent::class.java, UserHandle::class.java)
-    }
+    private val currentUser = apis.field(SS.USER_HANDLE_CURRENT).get(null) as UserHandle
+    private val startActivityAsUser = apis.method(SS.START_ACTIVITY_AS_USER)
 
     private val performers = listOf(LaunchApp(), Broadcast(), TaskerTask())
 
@@ -76,22 +71,21 @@ class IntentActionRunner(
      * The send comes from system_server, so receivers see it as the system's own.
      * [IntentActions] decides what may be sent; the check is repeated here because
      * what the editor refuses can still reach storage from an older build or from
-     * `adb shell settings put`.
+     * `adb shell settings put`. [SendableAction] makes it the only way to [send].
      */
     private inner class Broadcast : Performer<BroadcastAction>(BroadcastAction::class.java) {
         override fun perform(action: BroadcastAction, change: Change) {
-            if (!IntentActions.isSendable(action.intentAction)) {
-                return logger.warn("Refused to broadcast ${action.intentAction}: the system process may not send that name")
-            }
+            val sendable = SendableAction.of(action.intentAction)
+                ?: return logger.warn("Refused to broadcast ${action.intentAction}: the system process may not send that name")
             if (action.packageName == null) {
-                logger.info("Broadcasting ${action.intentAction} to every app that listens for it")
+                logger.info("Broadcasting $sendable to every app that listens for it")
             }
-            val intent = Intent(action.intentAction)
-                .putExtra(EXTRA_MODE_ID, change.modeId)
-                .putExtra(EXTRA_MODE_NAME, change.modeName)
-                .putExtra(EXTRA_MODE_ACTIVE, change.active)
-            action.packageName?.let(intent::setPackage)
-            send(intent)
+            send(sendable) {
+                putExtra(EXTRA_MODE_ID, change.modeId)
+                putExtra(EXTRA_MODE_NAME, change.modeName)
+                putExtra(EXTRA_MODE_ACTIVE, change.active)
+                action.packageName?.let(::setPackage)
+            }
         }
     }
 
@@ -99,16 +93,18 @@ class IntentActionRunner(
         override fun perform(action: TaskerTaskAction, change: Change) {
             val tasker = TASKER_PACKAGES.firstOrNull(::isInstalled) ?: return logger.warn("Tasker is not installed")
             // The extras Tasker's own TaskerIntent class sends.
-            val intent = Intent(TASKER_ACTION_TASK)
-                .setPackage(tasker)
-                .putExtra("version_number", "1.1")
-                .putExtra("task_name", action.taskName)
-                .putExtra("task_priority", TASKER_PRIORITY)
-            send(intent)
+            send(TASKER_ACTION_TASK) {
+                setPackage(tasker)
+                putExtra("version_number", "1.1")
+                putExtra("task_name", action.taskName)
+                putExtra("task_priority", TASKER_PRIORITY)
+            }
         }
     }
 
-    private fun send(intent: Intent) {
+    /** The one way a broadcast leaves this runner: under a name [IntentActions] cleared. */
+    private fun send(action: SendableAction, extras: Intent.() -> Unit) {
+        val intent = Intent(action.name).apply(extras)
         // Lets manifest receivers of apps that are not running receive the broadcast.
         intent.addFlags(FLAG_RECEIVER_INCLUDE_BACKGROUND)
         context.sendBroadcastAsUser(intent, currentUser)
@@ -125,7 +121,7 @@ class IntentActionRunner(
         /** Play Store and direct-download builds of Tasker. */
         val TASKER_PACKAGES = listOf("net.dinglisch.android.taskerm", "net.dinglisch.android.tasker")
 
-        private const val TASKER_ACTION_TASK = "net.dinglisch.android.tasker.ACTION_TASK"
+        private val TASKER_ACTION_TASK = checkNotNull(SendableAction.of("net.dinglisch.android.tasker.ACTION_TASK"))
         private const val TASKER_PRIORITY = 5
 
         /** `Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND`, hidden from the SDK. */

@@ -1,18 +1,16 @@
 package my.github.MrxSiN.modeevolved.page
 
-import android.annotation.SuppressLint
 import android.content.Context
-import java.lang.reflect.Modifier
 
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
 import my.github.MrxSiN.modeevolved.R
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
 import my.github.MrxSiN.modeevolved.core.Feature
-import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.core.FeatureHooks
 import my.github.MrxSiN.modeevolved.core.Logger
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Adds this module's own row to the Modes list, under "Create your own mode".
@@ -22,37 +20,28 @@ import my.github.MrxSiN.modeevolved.dex.SettingsClasses
  * add-a-mode button, which is what tells the list apart from a single Mode's page.
  *
  * `onStart` is the refresh to hook: `onUpdatedZenModeState` is abstract there and
- * has no body to intercept. One is enough, because the row is drawn once and then
- * left alone until Settings rebuilds the screen, and coming back to the list from
- * a Mode's page starts the fragment again.
+ * has no body to intercept, which the contract's hook scope checks. One is enough,
+ * because the row is drawn once and then left alone until Settings rebuilds the
+ * screen, and coming back to the list from a Mode's page starts the fragment again.
  *
  * @param rowFor builds the row, once, from the first list's context.
  */
-// Hooking Settings internals is this module's purpose.
-@SuppressLint("PrivateApi")
 class ModesListHooks(
     private val xposed: XposedInterface,
-    private val classes: ClassFinder,
-    private val features: FeatureInstaller,
+    private val apis: HostResolver,
     private val logger: Logger,
     private val rowFor: (Context, PreferenceApi) -> ModesListSection,
-) {
+) : FeatureHooks {
+
+    override val feature = Feature.MODES_LIST
 
     private var section: ModesListSection? = null
 
-    fun install() {
-        features.install(Feature.MODES_LIST, ::hook)
-    }
+    override fun install() {
+        val preferences = PreferenceApi(apis)
+        val getScreen = apis.method(S.MODES_FRAGMENT_BASE_GET_SCREEN)
 
-    private fun hook() {
-        val base = classes.find(SettingsClasses.modesFragmentBase)
-        val preferences = PreferenceApi(classes)
-        val getScreen = classes.member("ZenModesFragmentBase.getPreferenceScreen()") { base.getMethod("getPreferenceScreen") }
-
-        val onStart = classes.member("ZenModesFragmentBase.onStart()") { base.getDeclaredMethod("onStart") }
-        check(!Modifier.isAbstract(onStart.modifiers)) { "${base.name}.onStart has no body to hook" }
-
-        xposed.hook(onStart).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
+        xposed.hook(apis.method(S.MODES_FRAGMENT_BASE_ON_START)).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
             val result = chain.proceed()
             runCatching { render(preferences, getScreen.invoke(chain.thisObject)) }
                 .onFailure { logger.warn("Could not add to the Modes list", it) }

@@ -74,7 +74,7 @@ class LocationUpdates(
         onFix(Reading(location, age))
     }
 
-    private companion object {
-        const val ATTRIBUTION_TAG = "PixelModesEvolved"
-    }
 }
+
+/** Who inside system_server is calling, which location, Bluetooth and other services require of it. */
+const val ATTRIBUTION_TAG = "PixelModesEvolved"

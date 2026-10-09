@@ -1,19 +1,19 @@
 package my.github.MrxSiN.modeevolved.page
 
 import android.annotation.SuppressLint
-import android.graphics.drawable.Drawable
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import java.lang.reflect.Method
 
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
 import my.github.MrxSiN.modeevolved.core.Feature
-import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.core.FeatureHooks
 import my.github.MrxSiN.modeevolved.core.Logger
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Draws this module's connected button groups as text buttons inside the card.
@@ -33,65 +33,49 @@ import my.github.MrxSiN.modeevolved.dex.SettingsClasses
  *
  * @param keyPrefix keys of the rows this module owns.
  */
-// Hooking Settings internals is this module's purpose.
-@SuppressLint("PrivateApi", "DiscouragedApi")
+// SettingsLib's view ids are merged into the Settings package and only reachable by name.
+@SuppressLint("DiscouragedApi")
 class ButtonGroupHooks(
     private val xposed: XposedInterface,
-    private val classes: ClassFinder,
+    private val apis: HostResolver,
     private val keyPrefix: String,
-    private val features: FeatureInstaller,
     private val logger: Logger,
-) {
+) : FeatureHooks {
 
-    fun install() {
-        features.install(Feature.BUTTON_GROUP, ::hook)
-    }
+    override val feature = Feature.BUTTON_GROUP
 
-    private fun hook() {
+    private lateinit var getKey: Method
+
+    override fun install() {
+        getKey = apis.method(S.PREFERENCE_GET_KEY)
         hookBinding()
         hookGrouping()
     }
 
     private fun hookGrouping() {
-        val adapter = classes.load(GROUP_ADAPTER)
-        val preferenceType = classes.load(PREFERENCE)
-        val isGroupDivider = classes.member("PreferenceGroupAdapter.isGroupDivider(Preference)") {
-            adapter.getDeclaredMethod("isGroupDivider", preferenceType)
-        }
-        val getKey = classes.member("Preference.getKey()") { preferenceType.getMethod("getKey") }
-        val segmented = classes.find(SettingsClasses.segmentedButton)
+        val segmented = apis.type(S.SEGMENTED_BUTTON)
 
-        xposed.hook(isGroupDivider).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
+        xposed.hook(apis.method(S.GROUP_ADAPTER_IS_DIVIDER)).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
             val preference = chain.args[0]
-            if (segmented.isInstance(preference) && (getKey.invoke(preference) as String?)?.startsWith(keyPrefix) == true) {
-                false
-            } else {
-                chain.proceed()
-            }
+            if (segmented.isInstance(preference) && isOurs(preference)) false else chain.proceed()
         }
     }
 
     private fun hookBinding() {
-        val preference = classes.find(SettingsClasses.segmentedButton)
-        val holderType = classes.load(VIEW_HOLDER)
-        val onBind = classes.member("SegmentedButtonPreference.onBindViewHolder(ViewHolder)") {
-            preference.getDeclaredMethod("onBindViewHolder", holderType)
-        }
-        val getKey = classes.member("Preference.getKey()") { preference.getMethod("getKey") }
-        val itemView = classes.member("PreferenceViewHolder.itemView") { holderType.getField("itemView") }
-        val setIcon = classes.member("MaterialButton.setIcon(Drawable)") {
-            classes.load(MATERIAL_BUTTON).getMethod("setIcon", Drawable::class.java)
-        }
+        val itemView = apis.field(S.VIEW_HOLDER_ITEM_VIEW)
+        val setIcon = apis.method(S.MATERIAL_BUTTON_SET_ICON)
 
-        xposed.hook(onBind).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
+        xposed.hook(apis.method(S.SEGMENTED_BUTTON_ON_BIND)).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
             val result = chain.proceed()
-            if ((getKey.invoke(chain.thisObject) as String?)?.startsWith(keyPrefix) == true) {
+            if (isOurs(chain.thisObject)) {
                 runCatching { labelsInside(itemView.get(chain.args[0]) as View) { setIcon.invoke(it, null) } }
                     .onFailure { logger.warn("Could not restyle a button group", it) }
             }
             result
         }
     }
+
+    private fun isOurs(preference: Any?): Boolean = (getKey.invoke(preference) as String?)?.startsWith(keyPrefix) == true
 
     private fun labelsInside(row: View, removeIcon: (Button) -> Unit) {
         val group = row.findViewById<ViewGroup>(id(row, "button_group")) ?: return
@@ -114,10 +98,6 @@ class ButtonGroupHooks(
         view.resources.getIdentifier(name, "id", view.context.packageName)
 
     private companion object {
-        const val GROUP_ADAPTER = "com.android.settingslib.widget.SettingsPreferenceGroupAdapter"
-        const val PREFERENCE = "androidx.preference.Preference"
-        const val VIEW_HOLDER = "androidx.preference.PreferenceViewHolder"
-        const val MATERIAL_BUTTON = "com.google.android.material.button.MaterialButton"
         const val VERTICAL_PADDING_DP = 12
     }
 }

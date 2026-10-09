@@ -4,31 +4,32 @@ import android.app.AutomaticZenRule
 import android.app.NotificationManager
 import android.content.Context
 
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
+import my.github.MrxSiN.modeevolved.dex.HostResolver
+
 /**
  * Stores a Mode's rule the way Settings' own backend does.
  *
  * The hidden overload marks the change as made by the person, as every stock
- * Settings edit is, so the system treats it as a user choice. Builds without
- * it fall back to the public call.
+ * Settings edit is, so the system treats it as a user choice. A build without
+ * it resolves the contract's public fallback, which takes the same arguments
+ * but the last.
  */
-class ModeRuleWriter(context: Context) {
+class ModeRuleWriter(apis: HostResolver) {
 
-    private val notifications = context.getSystemService(NotificationManager::class.java)
+    private val update = apis.method(S.NOTIFICATION_MANAGER_UPDATE_RULE)
 
-    private val fromUserUpdate = runCatching {
-        NotificationManager::class.java.getMethod(
-            "updateAutomaticZenRule",
-            String::class.java,
-            AutomaticZenRule::class.java,
-            Boolean::class.javaPrimitiveType,
-        )
-    }.getOrNull()
+    fun get(context: Context, modeId: String): AutomaticZenRule? = notifications(context).getAutomaticZenRule(modeId)
 
-    fun get(modeId: String): AutomaticZenRule? = notifications.getAutomaticZenRule(modeId)
-
-    fun update(modeId: String, rule: AutomaticZenRule) {
-        val stored = fromUserUpdate?.invoke(notifications, modeId, rule, true) as Boolean?
-            ?: notifications.updateAutomaticZenRule(modeId, rule)
+    fun update(context: Context, modeId: String, rule: AutomaticZenRule) {
+        val arguments = arrayOf(modeId, rule, FROM_USER).copyOf(update.parameterCount)
+        val stored = update.invoke(notifications(context), *arguments) as Boolean
         check(stored) { "Android rejected the update to mode $modeId" }
+    }
+
+    private fun notifications(context: Context) = context.getSystemService(NotificationManager::class.java)
+
+    private companion object {
+        const val FROM_USER = true
     }
 }

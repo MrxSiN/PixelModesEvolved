@@ -34,6 +34,8 @@ data class EditorFacts(
     val pairedDevices: List<BluetoothTrigger> = emptyList(),
     val lastLocation: GeoPoint? = null,
     val taskerTasks: List<String> = emptyList(),
+    /** System settings system_server reported it cannot change here, by setting id, with why. */
+    val unavailableSettings: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -136,6 +138,7 @@ internal object FactsCodec {
         .put(PAIRED_DEVICES, JSONArray(facts.pairedDevices.map { JSONObject().put(ADDRESS, it.address).put(NAME, it.name) }))
         .putOpt(LAST_LOCATION, facts.lastLocation?.let { JSONObject().put(LATITUDE, it.latitude).put(LONGITUDE, it.longitude) })
         .put(TASKER_TASKS, JSONArray(facts.taskerTasks))
+        .put(UNAVAILABLE_SETTINGS, JSONObject(facts.unavailableSettings))
 
     fun decode(json: JSONObject): EditorFacts = EditorFacts(
         currentSsid = json.optString(CURRENT_SSID).ifEmpty { null },
@@ -143,6 +146,7 @@ internal object FactsCodec {
         pairedDevices = json.optJSONArray(PAIRED_DEVICES).objects().map { BluetoothTrigger(it.getString(ADDRESS), it.optString(NAME)) },
         lastLocation = json.optJSONObject(LAST_LOCATION)?.let { GeoPoint(it.getDouble(LATITUDE), it.getDouble(LONGITUDE)) },
         taskerTasks = json.optJSONArray(TASKER_TASKS).strings(),
+        unavailableSettings = json.optJSONObject(UNAVAILABLE_SETTINGS)?.let { reasons -> reasons.keys().asSequence().associateWith(reasons::getString) }.orEmpty(),
     )
 
     private fun JSONArray?.strings() = if (this == null) emptyList() else (0 until length()).map(::getString)
@@ -152,6 +156,7 @@ internal object FactsCodec {
     private const val PAIRED_DEVICES = "pairedDevices"
     private const val LAST_LOCATION = "lastLocation"
     private const val TASKER_TASKS = "taskerTasks"
+    private const val UNAVAILABLE_SETTINGS = "unavailableSettings"
     private const val ADDRESS = "address"
     private const val NAME = "name"
     private const val LATITUDE = "latitude"
@@ -165,7 +170,4 @@ object EditorIntents {
     const val EXTRA_SUBJECT = "$PACKAGE.extra.SUBJECT"
     const val EXTRA_INPUT = "$PACKAGE.extra.INPUT"
     const val EXTRA_RESULT = "$PACKAGE.extra.RESULT"
-
-    /** The only caller the editor answers. */
-    const val SETTINGS_PACKAGE = "com.android.settings"
 }

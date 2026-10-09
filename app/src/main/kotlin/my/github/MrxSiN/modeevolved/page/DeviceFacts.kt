@@ -7,8 +7,10 @@ import android.location.LocationManager
 import android.net.Uri
 import android.net.wifi.WifiManager
 
+import my.github.MrxSiN.modeevolved.action.SystemSetting
 import my.github.MrxSiN.modeevolved.editor.EditorFacts
 import my.github.MrxSiN.modeevolved.editor.EditorSubject
+import my.github.MrxSiN.modeevolved.store.SecureDiagnosticsStore
 import my.github.MrxSiN.modeevolved.trigger.BluetoothTrigger
 import my.github.MrxSiN.modeevolved.trigger.GeoPoint
 
@@ -31,7 +33,7 @@ class DeviceFacts(private val context: Context) {
             pairedDevices = pairedDevices(),
             lastLocation = lastLocation(),
         )
-        EditorSubject.ACTION -> EditorFacts(taskerTasks = taskerTasks())
+        EditorSubject.ACTION -> EditorFacts(taskerTasks = taskerTasks(), unavailableSettings = unavailableSettings())
         EditorSubject.CALENDAR_EVENT -> EditorFacts()
     }
 
@@ -68,6 +70,14 @@ class DeviceFacts(private val context: Context) {
             val name = rows.getColumnIndex("name").takeIf { it >= 0 } ?: 0
             buildList { while (rows.moveToNext()) rows.getString(name)?.let(::add) }
         }?.distinct()?.sortedBy { it.lowercase() }
+    }.orEmpty()
+
+    /** What system_server found it cannot change on this build, from the self-test it stored at boot. */
+    private fun unavailableSettings(): Map<String, String> = read {
+        val failed = SecureDiagnosticsStore.read(context.contentResolver, SecureDiagnosticsStore.SYSTEM_KEY).features.filterNot { it.ok }
+        SystemSetting.entries.mapNotNull { setting ->
+            failed.firstOrNull { it.feature == setting.feature }?.let { setting.id to it.detail.orEmpty() }
+        }.toMap()
     }.orEmpty()
 
     private fun <T> read(block: () -> T): T? = runCatching(block).getOrNull()

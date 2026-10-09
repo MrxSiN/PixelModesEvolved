@@ -4,7 +4,8 @@ import java.io.File
 
 import org.luckypray.dexkit.DexKitBridge
 
-import my.github.MrxSiN.modeevolved.core.ContractLog
+import my.github.MrxSiN.modeevolved.compat.ClassApi
+import my.github.MrxSiN.modeevolved.compat.Locator
 import my.github.MrxSiN.modeevolved.core.Logger
 import my.github.MrxSiN.modeevolved.core.Resolution
 
@@ -13,9 +14,11 @@ import my.github.MrxSiN.modeevolved.core.Resolution
  *
  * Every hook here reaches into a private part of another app, and a quarterly
  * release renames and moves those. A name is tried first, so a matching Android
- * build costs exactly what it did before: one `loadClass`. Only when that fails
- * is the host's dex searched, with [DexKit](https://github.com/LuckyPray/DexKit),
- * for a class in the same package declaring the same methods.
+ * build costs exactly what it did before: one `loadClass`. Only when that fails,
+ * and only for a class whose contract describes a legitimate substitute, is a
+ * structural search made: the host's dex, with [DexKit](https://github.com/LuckyPray/DexKit),
+ * restricted to the class's own package and method shape, or the class's line
+ * of ancestors.
  *
  * A search that finds more than one candidate finds nothing: hooking the wrong
  * class inside Settings is worse than losing the feature, which fails safe and
@@ -25,33 +28,38 @@ class DexClassFinder(
     override val classLoader: ClassLoader,
     private val search: DexSearch,
     private val logger: Logger,
-    override val contracts: ContractLog = ContractLog(),
 ) : ClassFinder {
 
-    override fun find(hooked: HookedClass): Class<*> {
-        runCatching { classLoader.loadClass(hooked.knownName) }.getOrNull()?.let {
-            contracts.record(hooked.knownName, Resolution.BY_NAME)
-            return it
-        }
+    override fun locate(api: ClassApi): Located? {
+        classLoader.loadOrNull(api.knownName)?.let { return Located(it, Resolution.BY_NAME) }
+        if (api.locator == Locator.ByName) return null
 
-        logger.warn("${hooked.knownName} is not in this build; searching its dex for what replaced it")
-        val found = search.use(classLoader) { locate(it, hooked) }
+        logger.warn("${api.knownName} is not in this build; searching for what replaced it")
+        val candidates = candidates(api).orEmpty()
+        val found = candidates.singleOrNull()?.let(classLoader::loadOrNull)
         if (found == null) {
-            contracts.record(hooked.knownName, Resolution.MISSING)
-            throw ClassNotFoundException("No ${hooked.knownName}, and nothing in ${hooked.inPackage} declaring ${hooked.declaring}")
+            logger.warn("No single replacement for ${api.knownName}: found ${candidates.ifEmpty { listOf("nothing") }}")
+            return null
         }
-        contracts.record(hooked.knownName, Resolution.BY_SIGNATURE)
-        logger.info("${hooked.knownName} is now ${found.name}")
-        return found
+        logger.info("${api.knownName} is now ${found.name}")
+        return Located(found, Resolution.BY_SIGNATURE)
     }
 
-    private fun locate(bridge: DexKitBridge, hooked: HookedClass): Class<*>? = bridge
-        .findClass {
-            searchPackages(hooked.inPackage)
-            matcher { hooked.declaring.forEach { method -> addMethod { name(method) } } }
+    override fun candidates(api: ClassApi): List<String>? = when (val locator = api.locator) {
+        Locator.ByName -> null
+        is Locator.DexSearch -> search.use(classLoader) { bridge ->
+            bridge.findClass {
+                searchPackages(locator.inPackage)
+                matcher { locator.declaring.forEach { method -> addMethod { name(method) } } }
+            }.map { it.name }
         }
-        .singleOrNull()
-        ?.getInstance(classLoader)
+        is Locator.Ancestor -> {
+            val start = locate(locator.of)?.type
+            val parameters = locator.parameters.map { classLoader.loadOrNull(it.name) }
+            if (start == null || parameters.any { it == null }) emptyList()
+            else listOfNotNull(ancestorOf(start, locator, parameters.filterNotNull().toTypedArray())?.name)
+        }
+    }
 }
 
 /**

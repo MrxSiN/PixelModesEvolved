@@ -2,6 +2,7 @@ package my.github.MrxSiN.modeevolved.diagnostics
 
 import org.json.JSONObject
 
+import my.github.MrxSiN.modeevolved.compat.FeatureContracts
 import my.github.MrxSiN.modeevolved.core.Contract
 import my.github.MrxSiN.modeevolved.core.FeatureHealth
 import my.github.MrxSiN.modeevolved.core.Resolution
@@ -36,7 +37,13 @@ data class DiagnosticsReport(
 
     val bySignature: Int get() = contracts.count { it.resolution == Resolution.BY_SIGNATURE }
 
-    val failed: Int get() = contracts.count { it.resolution == Resolution.MISSING }
+    val fallbacks: Int get() = contracts.count { it.resolution == Resolution.FALLBACK }
+
+    /** Members missing that some feature requires. An optional one costs only what it adds. */
+    val failed: Int get() = contracts.count { it.resolution == Resolution.MISSING && !isOptional(it) }
+
+    /** Whether no feature requires [contract], so its absence costs no feature ([FeatureContracts]). */
+    fun isOptional(contract: Contract): Boolean = contract.name in OPTIONAL_ONLY
 
     val featuresFailed: Int get() = features.count { !it.ok }
 
@@ -47,6 +54,12 @@ data class DiagnosticsReport(
      * it, so a report that exists at all was made with them.
      */
     val rooted: Boolean get() = moduleActive
+
+    private companion object {
+        val OPTIONAL_ONLY: Set<String> = FeatureContracts.all.let { contracts ->
+            contracts.flatMap { it.optional }.map { it.id }.toSet() - contracts.flatMap { it.required }.map { it.id }.toSet()
+        }
+    }
 }
 
 /** The report as text, since it crosses from Settings into this module's own app. */
@@ -101,7 +114,4 @@ object DiagnosticsIntents {
     const val PACKAGE = "my.github.MrxSiN.modeevolved"
     const val ACTIVITY = "$PACKAGE.diagnostics.DiagnosticsActivity"
     const val EXTRA_REPORT = "$PACKAGE.extra.REPORT"
-
-    /** The only caller the page answers. */
-    const val SETTINGS_PACKAGE = "com.android.settings"
 }

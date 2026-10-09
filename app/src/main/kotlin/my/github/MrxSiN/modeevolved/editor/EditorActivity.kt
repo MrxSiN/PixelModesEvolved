@@ -16,12 +16,13 @@ import my.github.MrxSiN.modeevolved.editor.ui.EditorTexts
 import my.github.MrxSiN.modeevolved.editor.ui.EditorTheme
 import my.github.MrxSiN.modeevolved.editor.ui.KindEditor
 import my.github.MrxSiN.modeevolved.editor.ui.TriggerEditors
+import my.github.MrxSiN.modeevolved.security.SettingsCaller
 
 /**
  * Adds or edits one trigger or action, for the Settings Mode page that started it.
  *
  * Answers only the Settings app: it starts this for a result and is the
- * process that stores what comes back. Opened any other way, it closes.
+ * process that stores what comes back. Opened any other way, it closes ([SettingsCaller]).
  */
 class EditorActivity : ComponentActivity() {
 
@@ -29,8 +30,8 @@ class EditorActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        if (!SettingsCaller.isSettings(callingPackage, launchedFromPackage)) return finish()
         val subject = intent.getStringExtra(EditorIntents.EXTRA_SUBJECT)
-            ?.takeIf { callingPackage == EditorIntents.SETTINGS_PACKAGE }
             ?.let { runCatching { EditorSubject.valueOf(it) }.getOrNull() }
             ?: return finish()
 

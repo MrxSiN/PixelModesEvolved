@@ -1,17 +1,16 @@
 package my.github.MrxSiN.modeevolved.page
 
-import android.annotation.SuppressLint
 import android.content.Context
 import java.lang.reflect.Method
 
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
 import my.github.MrxSiN.modeevolved.core.Feature
-import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.core.FeatureHooks
 import my.github.MrxSiN.modeevolved.core.Logger
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Adds this module's sections to each Mode's page in the Settings app.
@@ -19,40 +18,32 @@ import my.github.MrxSiN.modeevolved.dex.SettingsClasses
  * `ZenModeFragment` builds its screen from XML and keeps it up to date from
  * `onResume` and `onUpdatedZenModeState`. The rows are rebuilt after both, so
  * they survive the page refreshing itself and reflect the current rule. The
- * fragment is reached through [ClassFinder], which still finds it when a
+ * fragment is resolved from its contract, which still finds it when a
  * quarterly release has moved or renamed it.
  *
  * @param sectionsFor builds the sections, once, from the first page's context.
  */
-// Hooking Settings internals is this module's purpose.
-@SuppressLint("PrivateApi")
 class ModePageHooks(
     private val xposed: XposedInterface,
-    private val classes: ClassFinder,
-    private val features: FeatureInstaller,
+    private val apis: HostResolver,
     private val logger: Logger,
     private val sectionsFor: (Context, PreferenceApi) -> List<ModePageSection>,
     private val refresh: ModePageRefresh,
-) {
+) : FeatureHooks {
+
+    override val feature = Feature.MODE_PAGE
 
     private var sections: List<ModePageSection>? = null
 
-    fun install() {
-        features.install(Feature.MODE_PAGE, ::hook)
-    }
-
-    private fun hook() {
-        val fragment = classes.find(SettingsClasses.modeFragment)
+    override fun install() {
         val page = Page(
-            classes.member("ZenModeFragment.getMode()") { fragment.getMethod("getMode") },
-            classes.member("ZenModeFragment.getPreferenceScreen()") { fragment.getMethod("getPreferenceScreen") },
-            PreferenceApi(classes),
-            // Only the schedule warning needs this, so losing it must not cost the rows themselves.
-            runCatching { ZenModeApi(classes) }.getOrNull(),
+            apis.method(S.MODE_FRAGMENT_GET_MODE),
+            apis.method(S.MODE_FRAGMENT_GET_SCREEN),
+            PreferenceApi(apis),
+            ZenModeApi(apis),
         )
 
-        for (name in REFRESH_METHODS) {
-            val refresh = classes.member("ZenModeFragment.$name()") { fragment.getDeclaredMethod(name) }
+        for (refresh in listOf(apis.method(S.MODE_FRAGMENT_ON_RESUME), apis.method(S.MODE_FRAGMENT_ON_UPDATED))) {
             xposed.hook(refresh).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
                 val result = chain.proceed()
                 runCatching { render(page, chain.thisObject) }
@@ -65,11 +56,8 @@ class ModePageHooks(
     private fun render(page: Page, fragment: Any) {
         val mode = page.getMode.invoke(fragment) ?: return
         val screen = page.getScreen.invoke(fragment) ?: return
-        val ref = ModeRef(
-            id = mode.javaClass.getMethod("getId").invoke(mode) as String,
-            name = mode.javaClass.getMethod("getName").invoke(mode) as String,
-            hasSchedule = page.modes?.let { runCatching { it.hasSchedule(mode) }.getOrDefault(false) } == true,
-        )
+        // Only the schedule warning needs the rule, so losing it must not cost the rows themselves.
+        val ref = page.modes.ref(mode).copy(hasSchedule = runCatching { page.modes.hasSchedule(mode) }.getOrDefault(false))
         val context = page.preferences.context(screen)
         refresh.consume(ref.id, context)
         val sections = sections ?: sectionsFor(context, page.preferences).also { sections = it }
@@ -85,10 +73,6 @@ class ModePageHooks(
         val getMode: Method,
         val getScreen: Method,
         val preferences: PreferenceApi,
-        val modes: ZenModeApi?,
+        val modes: ZenModeApi,
     )
-
-    private companion object {
-        val REFRESH_METHODS = listOf("onResume", "onUpdatedZenModeState")
-    }
 }

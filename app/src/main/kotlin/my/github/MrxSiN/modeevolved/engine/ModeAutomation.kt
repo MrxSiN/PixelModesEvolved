@@ -2,6 +2,7 @@ package my.github.MrxSiN.modeevolved.engine
 
 import java.util.concurrent.Executor
 
+import my.github.MrxSiN.modeevolved.core.CoalescingTask
 import my.github.MrxSiN.modeevolved.store.ModeSource
 import my.github.MrxSiN.modeevolved.trigger.ModeRule
 
@@ -23,9 +24,12 @@ class ModeAutomation(
 
     private var observer: AutoCloseable? = null
 
+    /** A burst of rule writes is one reload, of the rules as they are by then. */
+    private val reloadSoon = CoalescingTask(thread, ::reload)
+
     fun start() {
-        observer = rules.observe { thread.execute(::reload) }
-        thread.execute(::reload)
+        observer = rules.observe(reloadSoon::request)
+        reloadSoon.request()
     }
 
     /**

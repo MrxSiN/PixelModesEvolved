@@ -30,14 +30,17 @@ class DiagnosticsLauncher(
     private val frameworkName: String,
     private val frameworkVersion: String,
     private val apiVersion: Int,
+    private val opener: EditorOpener,
 ) {
 
     fun open(context: Context) {
-        val activity = context.activity() ?: return
-        val intent = Intent()
-            .setClassName(DiagnosticsIntents.PACKAGE, DiagnosticsIntents.ACTIVITY)
-            .putExtra(DiagnosticsIntents.EXTRA_REPORT, DiagnosticsReportCodec.encode(report(context)))
-        activity.startActivity(intent)
+        // Gathered here, on the thread that records what this process found.
+        val report = DiagnosticsReportCodec.encode(report(context))
+        opener.open(context, requestCode = null) {
+            Intent()
+                .setClassName(DiagnosticsIntents.PACKAGE, DiagnosticsIntents.ACTIVITY)
+                .putExtra(DiagnosticsIntents.EXTRA_REPORT, report)
+        }
     }
 
     /** The one line the row shows: everything passed, or how much did not. */
@@ -74,6 +77,6 @@ class DiagnosticsLauncher(
 
     /** The version of the Settings build these hooks were measured against. */
     private fun settingsVersion(context: Context): String = runCatching {
-        context.packageManager.getPackageInfo(DiagnosticsIntents.SETTINGS_PACKAGE, 0).longVersionCode.toString()
+        context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toString()
     }.getOrDefault("")
 }

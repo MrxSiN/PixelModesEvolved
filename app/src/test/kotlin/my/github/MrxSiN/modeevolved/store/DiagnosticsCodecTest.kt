@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 import my.github.MrxSiN.modeevolved.core.Contract
-import my.github.MrxSiN.modeevolved.core.ContractLog
 import my.github.MrxSiN.modeevolved.core.Feature
 import my.github.MrxSiN.modeevolved.core.FeatureHealth
 import my.github.MrxSiN.modeevolved.core.Resolution
@@ -94,17 +93,5 @@ class DiagnosticsCodecTest {
         assertEquals(1, report.bySignature)
         assertEquals(1, report.failed)
         assertEquals(1, report.featuresFailed)
-    }
-
-    @Test
-    fun `a member that cannot be found is recorded missing and still fails its caller`() {
-        val log = ContractLog()
-        runCatching { log.resolve("Gone.method()") { error("no such method") } }
-        log.resolve("Here.method()") { "found" }
-
-        assertEquals(
-            listOf(Contract("Gone.method()", Resolution.MISSING), Contract("Here.method()", Resolution.BY_NAME)),
-            log.contracts,
-        )
     }
 }

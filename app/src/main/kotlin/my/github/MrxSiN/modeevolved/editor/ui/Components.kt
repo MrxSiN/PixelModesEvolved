@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
@@ -86,6 +87,7 @@ data class RowPosition(val isFirst: Boolean, val isLast: Boolean)
  * @param selected shows a radio button when not null.
  * @param leading drawn in place of [icon], for images that are not resources.
  * @param trailing drawn in place of the radio button, for a switch or another control.
+ * @param enabled false for a choice this device cannot offer: drawn faded, and not clickable.
  */
 @Composable
 fun SectionRow(
@@ -97,6 +99,7 @@ fun SectionRow(
     selected: Boolean? = null,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -115,7 +118,8 @@ fun SectionRow(
         color = container,
         contentColor = content,
         interactionSource = interaction,
-        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -314,3 +318,6 @@ private val OUTER: Dp = 28.dp
 private val INNER: Dp = 4.dp
 private val SELECTED: Dp = 40.dp
 private val GAP: Dp = 2.dp
+
+/** Material's disabled content opacity. */
+private const val DISABLED_ALPHA = 0.38f

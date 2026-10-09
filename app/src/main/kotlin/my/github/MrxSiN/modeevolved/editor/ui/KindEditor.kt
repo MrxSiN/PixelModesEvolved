@@ -34,5 +34,5 @@ object TriggerEditors {
 }
 
 object ActionEditors {
-    val all: List<KindEditor<ModeAction>> = listOf(LaunchAppEditor, BroadcastEditor, TaskerTaskEditor)
+    val all: List<KindEditor<ModeAction>> = listOf(SystemSettingEditor, LaunchAppEditor, BroadcastEditor, TaskerTaskEditor)
 }

@@ -116,26 +116,31 @@ class ActionTest {
     /** The monotonic clock the automation reads, moved by hand. */
     private var clock = 0L
 
-    private class FakeSource(private val lists: List<ModeActions>) : ModeSource<ModeActions> {
-        override fun all() = lists
-        override fun observe(listener: () -> Unit) = AutoCloseable {}
-    }
-
-    private class FakeStates(private val states: MutableMap<String, Boolean>) : ModeStates {
-        private var listener: () -> Unit = {}
-        override fun isActive(modeId: String) = states[modeId]
-        override fun observe(listener: () -> Unit): AutoCloseable {
-            this.listener = listener
-            return AutoCloseable { this.listener = {} }
-        }
-
-        fun set(modeId: String, active: Boolean) {
-            states[modeId] = active
-            listener()
-        }
-    }
-
     private companion object {
         val DIRECT = Executor { it.run() }
+    }
+}
+
+/** Stored actions, replaced by hand; replacing them tells the observer, as a write to storage does. */
+internal class FakeSource(var lists: List<ModeActions>) : ModeSource<ModeActions> {
+    private var listener: () -> Unit = {}
+    override fun all() = lists
+    override fun observe(listener: () -> Unit) = AutoCloseable { this.listener = {} }.also { this.listener = listener }
+
+    fun replace(lists: List<ModeActions>) {
+        this.lists = lists
+        listener()
+    }
+}
+
+/** Mode states set by hand; null is a Mode that no longer exists. */
+internal class FakeStates(private val states: MutableMap<String, Boolean?> = mutableMapOf()) : ModeStates {
+    private var listener: () -> Unit = {}
+    override fun isActive(modeId: String) = states[modeId]
+    override fun observe(listener: () -> Unit) = AutoCloseable { this.listener = {} }.also { this.listener = listener }
+
+    fun set(modeId: String, active: Boolean?) {
+        states[modeId] = active
+        listener()
     }
 }

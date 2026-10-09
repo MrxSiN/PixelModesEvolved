@@ -1,3 +1,55 @@
+# Pixel Modes Evolved v0.0.3
+
+Third alpha: Modes can now change device settings, and the module does less work inside
+system_server. Tested on a Pixel 8 Pro on **Android 17 QPR1 (October 2026)**, build
+`CP3A.261005.005`, with Vector v2.2. Expect rough edges, and keep a way to recover your phone.
+
+### System settings while a Mode is on
+
+- **Add an action → System settings**: auto-rotate, dark theme, brightness, adaptive brightness,
+  Extra dim, screen timeout, always show time and info, Smooth Display, ringer mode, ring,
+  notification, media and alarm volume, Wi-Fi, Bluetooth, NFC, Wi-Fi hotspot and mobile data.
+- Each is held for as long as the Mode is on, however it was switched, and **restored** when it
+  ends, unless you changed it yourself meanwhile. No second action is needed to undo it.
+- Several Modes on one setting: the one turned on last wins, and the next one takes over when it
+  ends. Booting or updating never re-applies a setting.
+- A Mode whose Do Not Disturb silences calls keeps the ringer silent while it is on, as Android
+  does. Mobile data follows the SIM chosen for mobile data. The hotspot goes through your
+  carrier's approval.
+- Each setting is checked on your build at boot and listed on the compatibility page; one your
+  phone cannot change is greyed out in the editor with the reason.
+
+### Less work inside system_server
+
+- Rules are compiled when you save them. A signal change re-checks only the rules that read it,
+  without allocating: 7 to 16 times less CPU per event on a Pixel 8 Pro.
+- Wi-Fi signal-strength updates and repeated Bluetooth broadcasts stop at the source instead of
+  re-running every rule.
+- No new sensor, location request, alarm, wakelock or polling. Idle cost measured the same.
+
+### Safer screens and contracts
+
+- The editor and the compatibility page answer only Settings itself, judged from what the system
+  recorded about the caller, never from what the intent claims.
+- Every private member a feature uses is declared once, with the feature it belongs to; a feature
+  installs only when everything it requires resolves, and CI checks each against the recorded
+  build.
+
+### Install
+
+1. Install `PixelModesEvolved-v0.0.3.apk`
+2. Enable Pixel Modes Evolved in Vector (static scope: System Framework and Settings)
+3. Reboot once, or let system_server hot reload if you are updating
+4. Settings → Modes → a Mode → Mode settings
+
+### Notes
+
+- Upgrading keeps your triggers and actions. Older builds ignore system-setting actions and keep
+  the rest.
+- If a build signed with a different key is installed, uninstall it first.
+
+---
+
 # Pixel Modes Evolved v0.0.2
 
 Second alpha, and mostly about not acting on what the phone does not yet know. Tested on a

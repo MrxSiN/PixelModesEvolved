@@ -4,7 +4,10 @@ import java.util.WeakHashMap
 
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.action.ModeActions
+import my.github.MrxSiN.modeevolved.action.SystemSettingAction
 import my.github.MrxSiN.modeevolved.editor.ItemFamilies
+import my.github.MrxSiN.modeevolved.presentation.SettingTexts
+import my.github.MrxSiN.modeevolved.presentation.SystemSettingPresentation
 import my.github.MrxSiN.modeevolved.presentation.Timings
 import my.github.MrxSiN.modeevolved.store.ModeStore
 
@@ -42,8 +45,8 @@ class ActionSection(
                 PreferenceRow.Link(
                     key = "${KEY_PREFIX}action_$index",
                     title = family.presentations.describe(text.raw, action),
-                    summary = text.string(Timings.summaryOf(action.timing)),
-                    icon = text.icon(context, family.presentations.of(action)?.icon),
+                    summary = text.string((action as? SystemSettingAction)?.let(SystemSettingPresentation::lifetimeOf) ?: Timings.summaryOf(action.timing)),
+                    icon = text.icon(context, (action as? SystemSettingAction)?.let { SettingTexts.iconOf(it.setting) } ?: family.presentations.of(action)?.icon),
                 ) { editor.open(context, family, mode, action) },
             )
         }

@@ -1,6 +1,8 @@
 package my.github.MrxSiN.modeevolved.action
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,5 +32,21 @@ class IntentActionsTest {
         assertFalse(IntentActions.isSendable("com.example..ACTION"))
         assertFalse(IntentActions.isSendable("9com.example.ACTION"))
         assertFalse(IntentActions.isSendable("com.example." + "x".repeat(IntentActions.MAX_LENGTH)))
+    }
+}
+
+/** The only way a broadcast name reaches the send path. */
+class SendableActionTest {
+
+    @Test
+    fun `an app's own name is cleared for sending`() {
+        assertEquals("com.example.modes.CHANGED", SendableAction.of("com.example.modes.CHANGED")?.name)
+    }
+
+    @Test
+    fun `a name the check refuses cannot become sendable`() {
+        assertNull(SendableAction.of("android.intent.action.BOOT_COMPLETED"))
+        assertNull(SendableAction.of("com.android.settings.SOMETHING"))
+        assertNull(SendableAction.of("not dotted"))
     }
 }

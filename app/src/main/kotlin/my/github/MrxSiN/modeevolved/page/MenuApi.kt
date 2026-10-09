@@ -5,7 +5,8 @@ import android.view.Menu
 import android.view.MenuItem
 import java.lang.reflect.Proxy
 
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Adds items to the app bar of a Settings page, through the Settings app's own androidx classes.
@@ -13,18 +14,15 @@ import my.github.MrxSiN.modeevolved.dex.ClassFinder
  * Items are registered as a `MenuProvider` bound to the page's fragment, so they show while it is
  * resumed and go away with it, as the stock Mode page's own menu does.
  */
-class MenuApi(classes: ClassFinder) {
+class MenuApi(apis: HostResolver) {
 
-    private val classLoader = classes.classLoader
-    private val fragment = classes.load("androidx.fragment.app.Fragment")
-    private val provider = classes.load("androidx.core.view.MenuProvider")
-    private val lifecycleOwner = classes.load("androidx.lifecycle.LifecycleOwner")
-    private val state = classes.load("androidx.lifecycle.Lifecycle\$State")
-    private val requireActivity = classes.member("Fragment.requireActivity()") { fragment.getMethod("requireActivity") }
-    private val addProvider = classes.member("ComponentActivity.addMenuProvider(MenuProvider, LifecycleOwner, State)") {
-        classes.load("androidx.activity.ComponentActivity").getMethod("addMenuProvider", provider, lifecycleOwner, state)
-    }
-    private val resumed = classes.member("Lifecycle.State.RESUMED") { state.getField("RESUMED").get(null) }
+    private val classLoader = apis.classLoader
+    private val provider = apis.type(S.MENU_PROVIDER)
+    private val onCreateMenu = apis.method(S.MENU_PROVIDER_ON_CREATE).name
+    private val onMenuItemSelected = apis.method(S.MENU_PROVIDER_ON_SELECT).name
+    private val requireActivity = apis.method(S.FRAGMENT_REQUIRE_ACTIVITY)
+    private val addProvider = apis.method(S.ADD_MENU_PROVIDER)
+    private val resumed = apis.field(S.LIFECYCLE_RESUMED).get(null)
 
     /** The activity showing [page], a fragment. */
     fun activity(page: Any): Activity = requireActivity.invoke(page) as Activity
@@ -38,8 +36,8 @@ class MenuApi(classes: ClassFinder) {
     fun add(page: Any, onCreate: (Menu) -> Unit, onSelect: (MenuItem) -> Boolean) {
         val menu = Proxy.newProxyInstance(classLoader, arrayOf(provider)) { proxy, method, args ->
             when (method.name) {
-                "onCreateMenu" -> onCreate(args[0] as Menu)
-                "onMenuItemSelected" -> onSelect(args[0] as MenuItem)
+                onCreateMenu -> onCreate(args[0] as Menu)
+                onMenuItemSelected -> onSelect(args[0] as MenuItem)
                 "equals" -> proxy === args[0]
                 "hashCode" -> System.identityHashCode(proxy)
                 "toString" -> "Pixel Modes Evolved menu"

@@ -6,8 +6,11 @@ enum class Resolution {
     /** Under the name this build was written against. */
     BY_NAME,
 
-    /** Under another name, after a dex search matched what it still looks like. */
+    /** Under another name, after a structural search matched what it still looks like. */
     BY_SIGNATURE,
+
+    /** Under a fallback signature its contract names, because the preferred one has gone. */
+    FALLBACK,
 
     /** Not at all. Whatever needed it switched itself off. */
     MISSING,
@@ -29,7 +32,7 @@ data class Contract(val name: String, val resolution: Resolution)
  * quarterly release — and it is the same list whether the build matched or not,
  * so it is also the answer to "what exactly does this module rely on".
  *
- * Written while hooks install, on one thread per process.
+ * Written by `HostResolver` while hooks install, on one thread per process.
  */
 class ContractLog {
 
@@ -39,17 +42,5 @@ class ContractLog {
 
     fun record(name: String, resolution: Resolution) {
         found[name] = Contract(name, resolution)
-    }
-
-    /**
-     * Records and returns what [lookup] finds, or records it missing and rethrows.
-     *
-     * Rethrowing is the point: a member nobody can find still has to fail its own
-     * feature rather than be quietly skipped and crash later somewhere else.
-     */
-    fun <T : Any> resolve(name: String, lookup: () -> T): T {
-        val result = runCatching(lookup)
-        record(name, if (result.isSuccess) Resolution.BY_NAME else Resolution.MISSING)
-        return result.getOrThrow()
     }
 }

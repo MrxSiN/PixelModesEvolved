@@ -32,14 +32,14 @@ class WifiSource(context: Context, private val handler: Handler) : SignalSource 
 
     private val callback = object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
         override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+            // Signal strength and link speed change capabilities too; only a changed SSID is news.
             val ssid = (capabilities.transportInfo as? WifiInfo)?.ssid?.let(::unquote)
-            if (ssid == null) ssids.remove(network) else ssids[network] = ssid
-            emit()
+            val previous = if (ssid == null) ssids.remove(network) else ssids.put(network, ssid)
+            if (previous != ssid) emit()
         }
 
         override fun onLost(network: Network) {
-            ssids.remove(network)
-            emit()
+            if (ssids.remove(network) != null) emit()
         }
     }
 

@@ -7,6 +7,7 @@
 #   scripts/device.sh modes     show every Mode and whether it is active
 #   scripts/device.sh health    which of this module's hooks the running build still allows
 #   scripts/device.sh check     one-shot health report
+#   scripts/device.sh callers   the exported screens turn away every caller but Settings
 #
 # Set ADB_SERIAL when more than one device is attached.
 set -eu
@@ -41,6 +42,26 @@ case "${1:-check}" in
         echo "== settings"; $ADB shell settings get secure mode_evolved_diagnostics_settings
         echo "== system";   $ADB shell settings get secure mode_evolved_diagnostics_system
         ;;
+    callers)
+        # Shell is not Settings, and says it is in every way an intent can: each must be turned away.
+        top() { $ADB shell dumpsys activity activities | grep -m 1 topResumedActivity; }
+        FAILED=0
+        for SCREEN in .editor.EditorActivity .diagnostics.DiagnosticsActivity; do
+            for SPOOF in "" "--es android.intent.extra.REFERRER_NAME android-app://com.android.settings" "--eu android.intent.extra.REFERRER android-app://com.android.settings"; do
+                # shellcheck disable=SC2086
+                $ADB shell am start -W -n "$PACKAGE/$SCREEN" \
+                    --es $PACKAGE.extra.SUBJECT TRIGGER --es $PACKAGE.extra.REPORT '{}' $SPOOF >/dev/null
+                sleep 1
+                if top | grep -q "$PACKAGE/"; then
+                    echo "OPEN     $SCREEN ${SPOOF:-(plain)}"; FAILED=1
+                    $ADB shell input keyevent KEYCODE_BACK
+                else
+                    echo "refused  $SCREEN ${SPOOF:-(plain)}"
+                fi
+            done
+        done
+        exit $FAILED
+        ;;
     check)
         echo "== device";  $ADB shell getprop ro.build.fingerprint
         echo "== package"; $ADB shell pm path "$PACKAGE" || echo "not installed"
@@ -52,7 +73,7 @@ case "${1:-check}" in
         echo "== log";     $ADB logcat -d -s PixelModesEvolved | tail -n 40
         ;;
     *)
-        echo "usage: $0 install|logs|rules|modes|health|check" >&2
+        echo "usage: $0 install|logs|rules|modes|health|check|callers" >&2
         exit 2
         ;;
 esac

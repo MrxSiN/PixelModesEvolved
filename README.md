@@ -154,6 +154,47 @@ its actions are loaded is only remembered.
 </details>
 
 <details open>
+<summary><b>⚙️ System settings</b></summary>
+<br>
+
+**Add an action → System settings** holds a device setting at a value for as long as the Mode is
+on, however the Mode was switched: a trigger, its schedule, Quick Settings or by hand. It is not
+a one-shot command, and it needs no second action to undo it.
+
+| Group | Settings |
+|---|---|
+| Display | Auto-rotate screen, Dark theme, Brightness level, Adaptive brightness, Extra dim, Screen timeout, Always show time and info, Smooth Display |
+| Sound & vibration | Ringer mode (Ring, Vibrate, Silent), Ring, Notification, Media and Alarm volume |
+| Connections | Wi-Fi, Bluetooth, NFC, Wi-Fi hotspot, Mobile data |
+
+- **Restore previous value**, on by default: when the Mode ends, the setting goes back to what it
+  was before the first Mode took it.
+- **Your changes win.** If you change a setting yourself while a Mode holds it, the module does
+  not change it back, and does not restore over it when the Mode ends.
+- **Several Modes on one setting:** the Mode turned on most recently wins. When it ends, the
+  next one still on applies again; when the last one ends, the previous value comes back.
+- **Saving** a setting on a Mode that is already on applies it at once; removing it, or deleting
+  the Mode, gives the setting back.
+- **Booting or updating** never re-applies a setting: a Mode already on keeps the setting it held,
+  and one that ended while the phone was off gives it back when the module starts, unless the
+  setting changed meanwhile.
+- **Mobile data** applies to the SIM chosen for mobile data. If that choice changes while the Mode
+  is on, the previous value is not restored onto the other SIM.
+- **Sound follows Do Not Disturb.** A Mode whose Do Not Disturb silences calls keeps the ringer,
+  ring and notification volume silent while it is on, as Android does; the module cannot override
+  that, and restores them afterwards. Raising the ring volume above zero puts the ringer on Ring,
+  as the volume slider does.
+- **Brightness** uses the slider's own scale. With adaptive brightness on, the phone keeps adjusting
+  from that level.
+- **Wi-Fi hotspot** goes through your carrier's approval, as Quick Settings does; if it is refused
+  the hotspot stays off.
+- A setting this phone cannot change is shown greyed out with the reason, and listed on the
+  compatibility page. Settings change only while the phone's owner is the user in the foreground.
+
+</details>
+
+
+<details open>
 <summary><b>📅 Calendar event filter</b></summary>
 <br>
 
@@ -199,7 +240,7 @@ offers "Set a schedule" again. The Mode's settings, triggers and actions stay.
 
 ## Status
 
-**v0.0.2 — alpha.** Hooks reach into Settings and system_server internals that move between
+**v0.0.3 — alpha.** Hooks reach into Settings and system_server internals that move between
 Android releases. When one moves, the feature that needs it switches itself off, and
 **Compatibility & diagnostics** — at the bottom of the Modes list, under *Create your own
 mode* — says which one went.
@@ -207,8 +248,9 @@ mode* — says which one went.
 That page reports what this module found when it met the build it is running on: whether it is
 active and at what version, the Android build, Settings version, libxposed API and framework
 under it, each feature with Compatible or Unavailable and the reason, how many of its hooks
-resolved, how many were found by signature after a rename, how many failed — and then every
-class, method and field it depends on, one row each. **Copy compatibility report** puts the
+resolved, how many were found by signature after a rename or by a fallback signature, how many
+failed — and then every class, method and field it depends on, one row each, with optional ones
+marked as such. **Copy compatibility report** puts the
 whole thing on the clipboard for a bug report.
 
 ### Compatibility
@@ -218,6 +260,7 @@ request adding a row — that table is worth more than any claim about "Android 
 
 | Device | Android build | Vector | Triggers tested | Actions tested | Tester | Date |
 |---|---|---|---|---|---|---|
+| Pixel 8 Pro | 17 QPR1 · `CP3A.261005.005` | 2.2 | Wi-Fi, Bluetooth, location, airplane | All 18 system settings | @MrxSiN | 2026-10 |
 | Pixel 8 Pro | 17 QPR1 · `CP3A.260905.009` | 2.2 | Wi-Fi, Bluetooth, location, movement, airplane | Open app, send intent, Tasker | @MrxSiN | 2026-09 |
 
 On a device, `scripts/device.sh health` prints the same self-test the page shows:
@@ -226,6 +269,11 @@ On a device, `scripts/device.sh health` prints the same self-test the page shows
 scripts/device.sh health
 ```
 
+Every build in the table is also recorded, as class and member names only, under
+`app/src/test/resources/hosts/`, and CI checks every feature's contract against each one. To
+record a new build, run `scripts/capture-host-fixture.sh` on it. [ARCHITECTURE.md](ARCHITECTURE.md)
+explains the contracts, the fixtures and the security boundary of the editor.
+
 ### Known limits
 
 - A scheduled Mode still follows its schedule, which overrides a trigger at a schedule boundary.
@@ -233,6 +281,8 @@ scripts/device.sh health
   a schedule.
 - After an update is hot reloaded, triggers are judged afresh, as at boot: a met rule switches its
   Mode on, an unmet one leaves it alone.
+- System settings belong to the phone's owner (the system user): with another user in the
+  foreground they are left alone.
 - **Left still** and **flying** both start out unknown, so a rule reading them is not met until
   the signal has decided: ten quiet minutes for still, one position fix for flying.
 
@@ -399,10 +449,12 @@ Each switch logs `Mode <id> -> on|off`, and each input logs `Signal X: start|sto
 ## Design
 
 ```
-ModeEvolvedModule   Xposed entry: routes system_server and Settings to their parts
+ModeEvolvedModule   Xposed entry: only routes system_server and Settings to their parts
+compat/             every private member each feature needs, per host; fixtures and checks read it
 store/              shared storage over Settings.Secure
 trigger/            pure domain: trigger kinds, device state, rules — no Android code
-dex/                finding a hooked class again after a release renamed it
+dex/                resolving contracts: by name, then a structural search, never an ambiguous one
+security/           who the exported editor and compatibility page answer
 rule/               rule codec and one TriggerKind per trigger
 action/             Mode actions, their codec, and ActionAutomation
 engine/             TriggerEngine decides, SignalHub runs inputs, ModeAutomation wires them
@@ -419,3 +471,8 @@ To add a trigger, add one `Trigger`, one `TriggerKind`, one `TriggerPresentation
 `KindEditor` and, if it reads a new input, one `SignalSource`. To add an action, add one
 `ModeAction`, one `ActionKind`, one `ActionPresentation`, one `KindEditor` and one `Performer` in
 `IntentActionRunner`. Then register each in its list; nothing existing changes.
+
+To hook something new in Settings or system_server, declare the member in `compat/SettingsApis.kt`
+or `compat/SystemServerApis.kt`, add it to its feature in `compat/FeatureContracts.kt`, resolve it
+through `HostResolver`, and run `scripts/check-project.sh`. The layering, the concurrency rule
+and the threat model are in [ARCHITECTURE.md](ARCHITECTURE.md).

@@ -4,10 +4,13 @@ import android.content.Context
 
 import io.github.libxposed.api.XposedInterface
 
+import my.github.MrxSiN.modeevolved.compat.FeatureContracts
+import my.github.MrxSiN.modeevolved.compat.Host
 import my.github.MrxSiN.modeevolved.core.BufferedHealthRecorder
-import my.github.MrxSiN.modeevolved.core.ContractLog
 import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.diagnostics.HostDescriptorCapture
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 import my.github.MrxSiN.modeevolved.dex.NamedClassFinder
 import my.github.MrxSiN.modeevolved.store.SecureDiagnosticsStore
 
@@ -23,15 +26,8 @@ import my.github.MrxSiN.modeevolved.store.SecureDiagnosticsStore
  */
 class SystemServerPart(private val xposed: XposedInterface, private val logger: Logger) {
 
-    /**
-     * What this part looked for in system_server.
-     *
-     * Only names here: searching the framework's own dex would mean parsing every
-     * boot jar at boot, for a gain the Settings half already covers.
-     */
-    private val contracts = ContractLog()
-
-    @Volatile private var classLoader: ClassLoader? = null
+    @Volatile private var apis: HostResolver? = null
+    @Volatile private var features: FeatureInstaller? = null
     @Volatile private var context: Context? = null
     @Volatile private var automation: AutoCloseable? = null
 
@@ -42,14 +38,15 @@ class SystemServerPart(private val xposed: XposedInterface, private val logger: 
      * has a context, and there is no content resolver to write through before then.
      */
     private val health = BufferedHealthRecorder()
-    private val features = FeatureInstaller(logger, health)
 
     /** Installs the hooks; the automation starts when boot completes. */
     fun install(classLoader: ClassLoader) {
-        this.classLoader = classLoader
-        val classes = NamedClassFinder(classLoader, contracts)
-        CalendarEventFilterHooks(xposed, classes, features, logger).install()
-        SystemServerHooks(xposed, classes, features, ::start).install()
+        // Names only: searching the framework's dex would mean parsing every boot jar at boot.
+        val apis = HostResolver(NamedClassFinder(classLoader)).also { apis = it }
+        val features = FeatureInstaller(logger, health) { feature -> apis.missing(FeatureContracts.of(feature)).map { it.id } }
+            .also { features = it }
+        features.install(CalendarEventFilterHooks(xposed, apis, logger))
+        features.install(SystemServerHooks(xposed, apis, ::start))
     }
 
     /** Stops this build's automation and returns what the next build needs to take over. */
@@ -57,7 +54,7 @@ class SystemServerPart(private val xposed: XposedInterface, private val logger: 
         automation?.close()
         automation = null
         logger.info("Handing system_server over to a new build")
-        return mapOf(CLASS_LOADER to classLoader, CONTEXT to context)
+        return mapOf(CLASS_LOADER to apis?.classLoader, CONTEXT to context)
     }
 
     /** Continues from [state], what the previous build's [handOff] returned. */
@@ -72,17 +69,20 @@ class SystemServerPart(private val xposed: XposedInterface, private val logger: 
 
     private fun start(context: Context) {
         this.context = context
+        val apis = checkNotNull(apis)
+        val features = checkNotNull(features)
         val store = SecureDiagnosticsStore(
             context.contentResolver,
             SecureDiagnosticsStore.SYSTEM_KEY,
-            contracts,
+            apis.log,
             "${xposed.frameworkName} ${xposed.frameworkVersion}",
             xposed.apiVersion,
         )
         health.writeTo(store)
-        automation = AutomationStarter(logger, NamedClassFinder(checkNotNull(classLoader), contracts), features).start(context)
-        // The action runner looks up hidden members after the hooks did, so those reach the store too.
-        store.write()
+        // Each part records its outcome as it starts, on the automation thread, which also writes
+        // the members it looked up after the hooks did.
+        automation = AutomationStarter(logger, apis, features).start(context)
+        HostDescriptorCapture(Host.SYSTEM_SERVER, NamedClassFinder(apis.classLoader), logger).captureIfRequested(context)
     }
 
     private companion object {

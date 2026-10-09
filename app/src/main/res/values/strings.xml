@@ -64,6 +64,9 @@
 
     <string name="diagnostics_contracts">Settings and system contracts</string>
     <string name="diagnostics_renamed">Renamed</string>
+    <string name="diagnostics_fallback">Fallback</string>
+    <string name="diagnostics_optional">Optional</string>
+    <string name="diagnostics_fallbacks">Fallback signatures</string>
 
     <string name="diagnostics_report">Report</string>
     <string name="diagnostics_copy">Copy compatibility report</string>
@@ -165,7 +168,7 @@
     <!-- Mode actions. -->
     <string name="actions_title">Mode actions</string>
     <string name="actions_add_title">Add an action</string>
-    <string name="actions_add_summary">Open an app, send an intent or run a Tasker task</string>
+    <string name="actions_add_summary">Change a setting, open an app, send an intent or run a Tasker task</string>
     <string name="actions_add_intro">Choose what happens when this mode turns on or off, however it was switched.</string>
     <string name="actions_remove_title">Remove action?</string>
     <string name="actions_remove_text">This will no longer run when %1$s changes.</string>
@@ -213,4 +216,60 @@
     <string name="action_tasker_name_section">Task name</string>
     <string name="action_tasker_name">Task name, exactly as in Tasker</string>
     <string name="action_tasker_note">Tasker only runs tasks for other apps when Tasker › Preferences › Misc › Allow External Access is on.</string>
+    <!-- System settings a Mode holds while it is on. -->
+    <string name="action_system_settings">System settings</string>
+    <string name="action_system_settings_hint">Change a device setting while this mode is on</string>
+    <string name="settings_group_display">Display</string>
+    <string name="settings_group_sound">Sound &amp; vibration</string>
+    <string name="settings_group_connectivity">Connections</string>
+    <string name="settings_search">Search settings</string>
+    <string name="settings_none_found">No settings match</string>
+    <string name="setting_auto_rotate">Auto-rotate screen</string>
+    <string name="setting_dark_theme">Dark theme</string>
+    <string name="setting_brightness">Brightness level</string>
+    <string name="setting_adaptive_brightness">Adaptive brightness</string>
+    <string name="setting_extra_dim">Extra dim</string>
+    <string name="setting_screen_timeout">Screen timeout</string>
+    <string name="setting_always_on_display">Always show time and info</string>
+    <string name="setting_smooth_display">Smooth Display</string>
+    <string name="setting_ringer_mode">Ringer mode</string>
+    <string name="setting_ring_volume">Ring volume</string>
+    <string name="setting_notification_volume">Notification volume</string>
+    <string name="setting_media_volume">Media volume</string>
+    <string name="setting_alarm_volume">Alarm volume</string>
+    <string name="setting_wifi">Wi-Fi</string>
+    <string name="setting_bluetooth">Bluetooth</string>
+    <string name="setting_nfc">NFC</string>
+    <string name="setting_hotspot">Wi-Fi hotspot</string>
+    <string name="setting_mobile_data">Mobile data</string>
+    <string name="setting_on">On</string>
+    <string name="setting_off">Off</string>
+    <string name="setting_ringer_normal">Ring</string>
+    <string name="setting_ringer_vibrate">Vibrate</string>
+    <string name="setting_ringer_silent">Silent</string>
+    <string name="setting_percent">%1$d%%</string>
+    <plurals name="setting_timeout_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+    <plurals name="setting_timeout_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <string name="setting_summary">%1$s · %2$s</string>
+    <string name="setting_while_on">While this mode is on · Tap to edit</string>
+    <string name="setting_while_on_restores">While this mode is on · Restores previous value</string>
+    <string name="setting_value_title">While this mode is on</string>
+    <string name="setting_restore">Restore previous value</string>
+    <string name="setting_restore_summary">When this mode ends, unless you changed it yourself</string>
+    <string name="setting_change">Choose another setting</string>
+    <string name="setting_unavailable">Unavailable on this device</string>
+    <string name="setting_unavailable_reason">Unavailable: %1$s</string>
+    <string name="setting_note">If several modes change the same setting, the one turned on most recently wins. If you change the setting yourself while a mode holds it, your change stays.</string>
+    <string name="setting_note_mobile_data">Applies to the SIM chosen for mobile data. If that changes while this mode is on, the previous value is not restored.</string>
+    <string name="setting_note_hotspot">Your carrier may need to approve the hotspot. If it refuses, the hotspot stays off.</string>
+    <string name="setting_note_brightness">Matches the brightness slider. With adaptive brightness on, your phone keeps adjusting from this level.</string>
+    <string name="setting_note_media_volume">Android may keep media volume lower to protect your hearing while headphones are connected.</string>
+    <string name="setting_note_ringer">Do Not Disturb settings of an active mode still decide what can make sound.</string>
+    <string name="setting_note_wifi">Turning off Wi-Fi also ends Wi-Fi triggers until it is back on.</string>
 </resources>

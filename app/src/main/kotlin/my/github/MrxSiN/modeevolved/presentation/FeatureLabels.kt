@@ -1,6 +1,7 @@
 package my.github.MrxSiN.modeevolved.presentation
 
 import my.github.MrxSiN.modeevolved.R
+import my.github.MrxSiN.modeevolved.action.SystemSetting
 import my.github.MrxSiN.modeevolved.core.Feature
 
 /** What each hooked feature is called where a person reads the compatibility check. */
@@ -18,5 +19,6 @@ object FeatureLabels {
         Feature.CALENDAR_FILTER -> R.string.feature_calendar_filter
         Feature.TRIGGER_AUTOMATION -> R.string.feature_trigger_automation
         Feature.ACTION_AUTOMATION -> R.string.feature_action_automation
+        else -> SettingTexts.labelOf(SystemSetting.entries.first { it.feature == feature })
     }
 }

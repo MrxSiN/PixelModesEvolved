@@ -34,8 +34,10 @@ data class WifiTrigger(val ssid: String) : Trigger {
  * @property name what the device was called when chosen, kept for display only.
  */
 data class BluetoothTrigger(val address: String, val name: String) : Trigger {
+    // Outside the constructor, so equality and storage stay the address as given.
+    private val key = address.uppercase()
     override val signal: Signal get() = Signal.BLUETOOTH
-    override fun isMetBy(state: DeviceState): Boolean = address.uppercase() in state.bluetoothDevices
+    override fun isMetBy(state: DeviceState): Boolean = key in state.bluetoothDevices
 }
 
 /**

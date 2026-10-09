@@ -1,6 +1,5 @@
 package my.github.MrxSiN.modeevolved.page
 
-import android.annotation.SuppressLint
 import android.content.Context
 
 import io.github.libxposed.api.XposedInterface
@@ -9,48 +8,32 @@ import io.github.libxposed.api.XposedInterface.ExceptionMode
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.calendar.CalendarConditionFilter
 import my.github.MrxSiN.modeevolved.calendar.EventFilter
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
 import my.github.MrxSiN.modeevolved.core.Feature
-import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.core.FeatureHooks
 import my.github.MrxSiN.modeevolved.core.Logger
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /** Adds an event filter to Android's existing Calendar events schedule page. */
-@SuppressLint("PrivateApi")
 class StockCalendarHooks(
     private val xposed: XposedInterface,
-    private val classes: ClassFinder,
-    private val features: FeatureInstaller,
+    private val apis: HostResolver,
     private val logger: Logger,
     private val textFor: (Context) -> ModuleText,
-) {
+    private val opener: EditorOpener,
+) : FeatureHooks {
 
-    fun install() {
-        features.install(Feature.CALENDAR_ROW) {
-            val controller = classes.load(CONTROLLER)
-            val preference = classes.load("androidx.preference.Preference")
-            val zenMode = classes.find(SettingsClasses.zenMode)
-            val update = classes.member("ZenModeSetCalendarPreferenceController.updateState(Preference, ZenMode)") {
-                controller.getDeclaredMethod("updateState", preference, zenMode)
-            }
-            val section = StockCalendarSection(
-                PreferenceApi(classes),
-                ZenModeApi(classes),
-                CalendarEventEditorLauncher(),
-                textFor,
-            )
+    override val feature = Feature.CALENDAR_ROW
 
-            xposed.hook(update).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
-                val result = chain.proceed()
-                runCatching { section.render(chain.args[0], chain.args[1]) }
-                    .onFailure { logger.warn("Could not extend Calendar events", it) }
-                result
-            }
+    override fun install() {
+        val section = StockCalendarSection(PreferenceApi(apis), ZenModeApi(apis), CalendarEventEditorLauncher(opener), textFor)
+
+        xposed.hook(apis.method(S.CALENDAR_CONTROLLER_UPDATE_STATE)).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
+            val result = chain.proceed()
+            runCatching { section.render(chain.args[0], chain.args[1]) }
+                .onFailure { logger.warn("Could not extend Calendar events", it) }
+            result
         }
-    }
-
-    private companion object {
-        const val CONTROLLER = "com.android.settings.notification.modes.ZenModeSetCalendarPreferenceController"
     }
 }
 

@@ -83,6 +83,7 @@ fun DiagnosticsScreen(report: DiagnosticsReport, onBack: () -> Unit, onCopy: () 
             val counts = listOf(
                 stringResource(R.string.diagnostics_resolved) to "${report.resolved} / ${report.contracts.size}",
                 stringResource(R.string.diagnostics_by_signature) to report.bySignature.toString(),
+                stringResource(R.string.diagnostics_fallbacks) to report.fallbacks.toString(),
                 stringResource(R.string.diagnostics_failed) to report.failed.toString(),
             )
             counts.forEachIndexed { index, (label, value) -> ValueRow(label, value, positionOf(index, counts.size)) }
@@ -91,7 +92,7 @@ fun DiagnosticsScreen(report: DiagnosticsReport, onBack: () -> Unit, onCopy: () 
         if (report.contracts.isNotEmpty()) {
             Section(stringResource(R.string.diagnostics_contracts)) {
                 report.contracts.forEachIndexed { index, contract ->
-                    ContractRow(contract, positionOf(index, report.contracts.size))
+                    ContractRow(contract, report.isOptional(contract), positionOf(index, report.contracts.size))
                 }
             }
         }
@@ -145,14 +146,20 @@ private fun SectionScope.FeatureRow(health: FeatureHealth, position: RowPosition
     }
 }
 
-/** One member this module depends on, and what became of it. */
+/** One member this module depends on, and what became of it. A missing optional one costs no feature. */
 @Composable
-private fun SectionScope.ContractRow(contract: Contract, position: RowPosition) {
+private fun SectionScope.ContractRow(contract: Contract, optional: Boolean, position: RowPosition) {
     InfoRow(position) {
         Text(contract.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        val missing = contract.resolution == Resolution.MISSING
         Verdict(
-            ok = contract.resolution != Resolution.MISSING,
-            label = stringResource(R.string.diagnostics_renamed).takeIf { contract.resolution == Resolution.BY_SIGNATURE },
+            ok = !missing || optional,
+            label = when {
+                contract.resolution == Resolution.BY_SIGNATURE -> stringResource(R.string.diagnostics_renamed)
+                contract.resolution == Resolution.FALLBACK -> stringResource(R.string.diagnostics_fallback)
+                missing && optional -> stringResource(R.string.diagnostics_optional)
+                else -> null
+            },
         )
     }
 }

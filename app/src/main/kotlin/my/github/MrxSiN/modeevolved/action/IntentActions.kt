@@ -33,3 +33,20 @@ object IntentActions {
     /** Whether this module may send [action] at all. */
     fun isSendable(action: String): Boolean = isWellFormed(action) && !isReserved(action)
 }
+
+/**
+ * An action name [IntentActions] has cleared for sending from system_server.
+ *
+ * Only [of] makes one, after the check, and the runner's one send path takes
+ * nothing else. So no action kind added later can send a broadcast that skipped
+ * the check, whatever stored it.
+ */
+class SendableAction private constructor(val name: String) {
+
+    override fun toString(): String = name
+
+    companion object {
+        /** [action], cleared for sending, or null when this module may not send it. */
+        fun of(action: String): SendableAction? = if (IntentActions.isSendable(action)) SendableAction(action) else null
+    }
+}

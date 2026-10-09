@@ -10,13 +10,14 @@ import androidx.activity.enableEdgeToEdge
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.core.Resolution
 import my.github.MrxSiN.modeevolved.editor.ui.EditorTheme
+import my.github.MrxSiN.modeevolved.security.SettingsCaller
 
 /**
  * Shows what this module found when it met this Android build.
  *
  * Answers only the Settings app, which is the one process that can see both
  * halves of the report and hands the whole thing over in the intent. Opened any
- * other way, it closes.
+ * other way, it closes ([SettingsCaller]).
  */
 class DiagnosticsActivity : ComponentActivity() {
 
@@ -24,8 +25,8 @@ class DiagnosticsActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        if (!SettingsCaller.isSettings(callingPackage, launchedFromPackage)) return finish()
         val report = intent.getStringExtra(DiagnosticsIntents.EXTRA_REPORT)
-            ?.takeIf { referrer?.host == DiagnosticsIntents.SETTINGS_PACKAGE }
             ?.let(DiagnosticsReportCodec::decode)
             ?: return finish()
 
@@ -56,13 +57,17 @@ class DiagnosticsActivity : ComponentActivity() {
             appendLine()
         }
         appendLine()
-        appendLine("Hooks: ${report.resolved}/${report.contracts.size} resolved, ${report.bySignature} by signature, ${report.failed} failed")
+        appendLine(
+            "Hooks: ${report.resolved}/${report.contracts.size} resolved, ${report.bySignature} by signature, " +
+                "${report.fallbacks} by fallback, ${report.failed} failed",
+        )
         for (contract in report.contracts) {
             append(
                 when (contract.resolution) {
                     Resolution.BY_NAME -> "  OK   "
                     Resolution.BY_SIGNATURE -> "  MOVED"
-                    Resolution.MISSING -> "  FAIL "
+                    Resolution.FALLBACK -> "  ALT  "
+                    Resolution.MISSING -> if (report.isOptional(contract)) "  OPT  " else "  FAIL "
                 },
             )
             appendLine(contract.name)

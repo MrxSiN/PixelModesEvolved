@@ -1,17 +1,22 @@
 package my.github.MrxSiN.modeevolved.system
 
 import android.app.NotificationManager
+import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
+import android.provider.Settings
 
 import my.github.MrxSiN.modeevolved.action.ActionAutomation
 import my.github.MrxSiN.modeevolved.action.ActionCodec
+import my.github.MrxSiN.modeevolved.action.SettingClaims
+import my.github.MrxSiN.modeevolved.action.SystemSetting
+import my.github.MrxSiN.modeevolved.compat.SystemServerApis as SS
 import my.github.MrxSiN.modeevolved.core.Feature
 import my.github.MrxSiN.modeevolved.core.FeatureInstaller
 import my.github.MrxSiN.modeevolved.core.Logger
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 import my.github.MrxSiN.modeevolved.engine.ModeAutomation
 import my.github.MrxSiN.modeevolved.engine.SignalHub
 import my.github.MrxSiN.modeevolved.engine.TriggerEngine
@@ -33,7 +38,7 @@ import my.github.MrxSiN.modeevolved.signal.WifiSource
  */
 class AutomationStarter(
     private val logger: Logger,
-    private val classes: ClassFinder,
+    private val apis: HostResolver,
     private val features: FeatureInstaller,
 ) {
 
@@ -72,7 +77,7 @@ class AutomationStarter(
         val engine = TriggerEngine(modes, delays, logger)
         val sources = listOf(
             WifiSource(context, handler),
-            BluetoothSource(context, handler, logger),
+            BluetoothSource(context, handler, logger, bluetoothConnected()),
             LocationSource(context, handler, logger),
             MovementSource(AndroidMotionSensor(context, handler), delays, logger),
             FlightSource(context, handler, logger),
@@ -85,9 +90,10 @@ class AutomationStarter(
     private fun actions(context: Context, handler: Handler): ActionAutomation {
         val notifications = context.getSystemService(NotificationManager::class.java)
         return ActionAutomation(
+            settings = settingClaims(context),
             actions = SecureSettingsStore(context.contentResolver, SecureSettingsStore.ACTIONS_KEY, ActionCodec.standard()),
             states = ZenModeStates(context, handler, notifications),
-            runner = IntentActionRunner(context, notifications, classes, logger),
+            runner = IntentActionRunner(context, notifications, apis, logger),
             thread = handler::post,
             // Monotonic, so a cooldown is not cut short or stretched by the wall clock moving.
             now = SystemClock::elapsedRealtime,
@@ -95,7 +101,30 @@ class AutomationStarter(
         )
     }
 
+    /**
+     * Holds the system settings Modes claim, with ownership kept in `Settings.Secure` so it
+     * outlives a reboot or an update. Each setting is checked once here and reported on the
+     * compatibility page; one this build cannot change fails on its own when used.
+     */
+    private fun settingClaims(context: Context): SettingClaims {
+        val backend = SystemSettingsBackend(context, apis, logger)
+        for (setting in SystemSetting.entries) features.install(setting.feature) { backend.probe(setting) }
+        val resolver = context.contentResolver
+        return SettingClaims(backend, logger) { Settings.Secure.putString(resolver, CLAIMS_KEY, it.ifEmpty { null }) }
+            .apply { load(Settings.Secure.getString(resolver, CLAIMS_KEY)) }
+    }
+
+    /** Whether a bonded device is connected, when this build lets system_server ask. */
+    private fun bluetoothConnected(): ((BluetoothDevice) -> Boolean)? {
+        if (!apis.has(SS.BLUETOOTH_DEVICE_IS_CONNECTED)) return null
+        val isConnected = apis.method(SS.BLUETOOTH_DEVICE_IS_CONNECTED)
+        return { device -> isConnected.invoke(device) as Boolean }
+    }
+
     private companion object {
         const val THREAD_NAME = "PixelModesEvolved"
+
+        /** Who holds which system setting, from what baseline: `adb shell settings get secure mode_evolved_setting_claims`. */
+        const val CLAIMS_KEY = "mode_evolved_setting_claims"
     }
 }

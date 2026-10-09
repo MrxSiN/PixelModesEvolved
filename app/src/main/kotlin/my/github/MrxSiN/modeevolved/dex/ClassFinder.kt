@@ -1,84 +1,62 @@
 package my.github.MrxSiN.modeevolved.dex
 
-import my.github.MrxSiN.modeevolved.core.ContractLog
+import my.github.MrxSiN.modeevolved.compat.ClassApi
+import my.github.MrxSiN.modeevolved.compat.Locator
+import my.github.MrxSiN.modeevolved.core.Resolution
+
+/** A host class, and how it was found. */
+data class Located(val type: Class<*>, val resolution: Resolution)
 
 /**
- * One class this module reaches into, described so it can still be found after it moves.
+ * Finds the host classes the contracts name.
  *
- * @property knownName what it was called in the Android build this was written against.
- * @property inPackage where to look when that name has gone.
- * @property declaring methods it declares, by name. These are the names the hooks use
- * anyway, so a build that renamed them has already taken the feature away; what a search
- * on them finds is a class that was renamed or moved while keeping its shape, which is
- * what a quarterly release usually does.
- */
-data class HookedClass(val knownName: String, val inPackage: String, val declaring: List<String>)
-
-/**
- * Where this module gets the private members it depends on.
- *
- * Classes the SDK guarantees are loaded straight from [classLoader]. Everything
- * that lives inside another app goes through here, which both finds it and
- * writes it down: [contracts] is what the compatibility page lists, and what
- * says whether a member was found under its own name, under another one, or not
- * at all.
+ * The contract says what a class is and what may stand in for it ([ClassApi.locator]);
+ * a finder is the policy for how far to go looking. Member lookups sit above this, in
+ * [HostResolver], so every finder answers them the same way.
  */
 interface ClassFinder {
 
     val classLoader: ClassLoader
 
-    /** What was looked for and what became of it, for the compatibility page. */
-    val contracts: ContractLog
+    /** [api]'s class, or what legitimately replaced it, or null when neither can be found. */
+    fun locate(api: ClassApi): Located?
 
-    /** The class [hooked] names, or the one that replaced it. Throws when neither can be found. */
-    fun find(hooked: HookedClass): Class<*>
+    /**
+     * Every class [api]'s structural locator matches in this host, by name, or null when
+     * this finder does not search. What a host description records, so CI can see that
+     * a fallback would still find exactly one class.
+     */
+    fun candidates(api: ClassApi): List<String>?
 
-    /** The class [name], recorded as a contract. For classes that live in the host, not the SDK. */
-    fun load(name: String): Class<*> = contracts.resolve(name) { classLoader.loadClass(name) }
-
-    /** Records [name] and returns what [lookup] found, or records it missing and rethrows. */
-    fun <T : Any> member(name: String, lookup: () -> T): T = contracts.resolve(name, lookup)
+    /** A class by its name alone, for describing the host; null when it has none. */
+    fun byName(name: String): Class<*>? = classLoader.loadOrNull(name)
 }
 
-/** A finder that only knows names: what the module uses where the dex cannot be searched. */
-class NamedClassFinder(
-    override val classLoader: ClassLoader,
-    override val contracts: ContractLog = ContractLog(),
-) : ClassFinder {
+/**
+ * A finder that only knows names: system_server's, where searching the boot jars'
+ * dex would cost every boot.
+ */
+class NamedClassFinder(override val classLoader: ClassLoader) : ClassFinder {
 
-    override fun find(hooked: HookedClass): Class<*> = load(hooked.knownName)
+    override fun locate(api: ClassApi): Located? = classLoader.loadOrNull(api.knownName)?.let { Located(it, Resolution.BY_NAME) }
+
+    override fun candidates(api: ClassApi): List<String>? = null
 }
 
-/** The classes inside the Settings app that this module reaches into. */
-object SettingsClasses {
+internal fun ClassLoader.loadOrNull(name: String): Class<*>? = runCatching { loadClass(name) }.getOrNull()
 
-    private const val MODES = "com.android.settings.notification.modes"
-
-    /** The page each Mode opens, whose refreshes this module draws its rows after. */
-    val modeFragment = HookedClass(
-        knownName = "$MODES.ZenModeFragment",
-        inPackage = MODES,
-        declaring = listOf("onUpdatedZenModeState", "getMode"),
-    )
-
-    /** The base every Modes page shares, including the list, and where its refreshes are declared. */
-    val modesFragmentBase = HookedClass(
-        knownName = "$MODES.ZenModesFragmentBase",
-        inPackage = MODES,
-        declaring = listOf("onUpdatedZenModeState", "onStart", "onStop"),
-    )
-
-    /** SettingsLib's Mode, the value the page hands around. */
-    val zenMode = HookedClass(
-        knownName = "com.android.settingslib.notification.modes.ZenMode",
-        inPackage = "com.android.settingslib.notification.modes",
-        declaring = listOf("setCustomModeConditionId", "getRule"),
-    )
-
-    /** The Material 3 Expressive connected button group, which draws the AND and OR choice. */
-    val segmentedButton = HookedClass(
-        knownName = "com.android.settingslib.widget.SegmentedButtonPreference",
-        inPackage = "com.android.settingslib.widget",
-        declaring = listOf("setUpButton", "setCheckedIndex"),
-    )
+/**
+ * The highest class above [start] that declares [locator]'s method, walking up only while each
+ * class still has [Locator.Ancestor.sharing]. Null when none does.
+ */
+internal fun ancestorOf(start: Class<*>, locator: Locator.Ancestor, parameters: Array<Class<*>>): Class<*>? {
+    var found: Class<*>? = null
+    var walking: Class<*>? = start
+    while (walking != null) {
+        val type = walking
+        if (runCatching { type.getMethod(locator.sharing) }.isFailure) break
+        if (runCatching { type.getDeclaredMethod(locator.declaring, *parameters) }.isSuccess) found = type
+        walking = type.superclass
+    }
+    return found
 }

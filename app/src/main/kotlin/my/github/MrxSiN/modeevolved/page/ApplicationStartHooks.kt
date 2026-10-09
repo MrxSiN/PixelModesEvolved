@@ -5,9 +5,11 @@ import android.app.Application
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
 import my.github.MrxSiN.modeevolved.core.Feature
-import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.core.FeatureHooks
 import my.github.MrxSiN.modeevolved.core.Logger
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Calls [onStarted] once the hooked app's [Application] is created.
@@ -17,19 +19,19 @@ import my.github.MrxSiN.modeevolved.core.Logger
  */
 class ApplicationStartHooks(
     private val xposed: XposedInterface,
-    private val features: FeatureInstaller,
+    private val apis: HostResolver,
     private val logger: Logger,
     private val onStarted: (Application) -> Unit,
-) {
+) : FeatureHooks {
 
-    fun install() {
-        features.install(Feature.SETTINGS_RESTART) {
-            xposed.hook(Application::class.java.getDeclaredMethod("onCreate")).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
-                val result = chain.proceed()
-                runCatching { onStarted(chain.thisObject as Application) }
-                    .onFailure { logger.warn("Could not finish starting in the app", it) }
-                result
-            }
+    override val feature = Feature.SETTINGS_RESTART
+
+    override fun install() {
+        xposed.hook(apis.method(S.APPLICATION_ON_CREATE)).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
+            val result = chain.proceed()
+            runCatching { onStarted(chain.thisObject as Application) }
+                .onFailure { logger.warn("Could not finish starting in the app", it) }
+            result
         }
     }
 }

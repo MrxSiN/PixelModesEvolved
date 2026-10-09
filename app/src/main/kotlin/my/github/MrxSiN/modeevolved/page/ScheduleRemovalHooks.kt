@@ -1,10 +1,8 @@
 package my.github.MrxSiN.modeevolved.page
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
-import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 
@@ -12,11 +10,11 @@ import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.ExceptionMode
 
 import my.github.MrxSiN.modeevolved.R
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
 import my.github.MrxSiN.modeevolved.core.Feature
-import my.github.MrxSiN.modeevolved.core.FeatureInstaller
+import my.github.MrxSiN.modeevolved.core.FeatureHooks
 import my.github.MrxSiN.modeevolved.core.Logger
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Adds a "Remove schedule" trash button to the app bar of the stock Day and time and Calendar
@@ -24,65 +22,32 @@ import my.github.MrxSiN.modeevolved.dex.SettingsClasses
  *
  * Android lets a person give a Mode a schedule but offers no way back to a Mode without one.
  * Both pages are `ZenModeFragmentBase` subclasses, so the button is added when one is created.
+ * That base is found from the Mode page itself when a release renames it (its contract's locator).
  */
-// Hooking Settings internals is this module's purpose.
-@SuppressLint("PrivateApi")
 class ScheduleRemovalHooks(
     private val xposed: XposedInterface,
-    private val classes: ClassFinder,
-    private val features: FeatureInstaller,
+    private val apis: HostResolver,
     private val logger: Logger,
     private val textFor: (Context) -> ModuleText,
     private val refresh: ModePageRefresh,
-) {
+) : FeatureHooks {
 
-    fun install() {
-        features.install(Feature.SCHEDULE_REMOVAL) {
-            // The base every Mode page shares, taken from the Mode page itself rather than
-            // by name, so it follows that class wherever a release moves it.
-            val base = baseOf(classes.find(SettingsClasses.modeFragment))
-            val onCreate = classes.member("ZenModeFragmentBase.onCreate(Bundle)") {
-                base.getDeclaredMethod("onCreate", Bundle::class.java)
+    override val feature = Feature.SCHEDULE_REMOVAL
+
+    override fun install() {
+        val schedulePages = setOf(apis.type(S.SCHEDULE_TIME_FRAGMENT), apis.type(S.SCHEDULE_CALENDAR_FRAGMENT))
+        val getMode = apis.method(S.MODE_FRAGMENT_BASE_GET_MODE)
+        val button = ScheduleRemovalButton(MenuApi(apis), ZenModeApi(apis), ModeRuleWriter(apis), textFor, refresh, logger)
+
+        xposed.hook(apis.method(S.MODE_FRAGMENT_BASE_ON_CREATE)).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
+            val result = chain.proceed()
+            val page = chain.thisObject
+            if (page.javaClass in schedulePages) {
+                runCatching { button.addTo(page) { getMode.invoke(page) } }
+                    .onFailure { logger.warn("Could not add Remove schedule", it) }
             }
-            val getMode = classes.member("ZenModeFragmentBase.getMode()") { base.getMethod("getMode") }
-            val button = ScheduleRemovalButton(MenuApi(classes), ZenModeApi(classes), textFor, refresh, logger)
-
-            xposed.hook(onCreate).setExceptionMode(ExceptionMode.PROTECTIVE).intercept { chain ->
-                val result = chain.proceed()
-                val page = chain.thisObject
-                if (page.javaClass.name in SCHEDULE_PAGES) {
-                    runCatching { button.addTo(page) { getMode.invoke(page) } }
-                        .onFailure { logger.warn("Could not add Remove schedule", it) }
-                }
-                result
-            }
+            result
         }
-    }
-
-    /**
-     * The highest class in [fragment]'s line that is still a Mode page: `ZenModeFragmentBase`.
-     *
-     * Walking stops where `getMode` does, since that is what makes a fragment a Mode page at
-     * all; above it are the ordinary Settings fragment bases, which every page in the app
-     * shares. Of the classes up to there, the last one declaring the `onCreate` this hooks.
-     */
-    private fun baseOf(fragment: Class<*>): Class<*> {
-        var found: Class<*>? = null
-        var walking: Class<*>? = fragment
-        while (walking != null) {
-            val page = walking
-            if (runCatching { page.getMethod("getMode") }.isFailure) break
-            if (runCatching { page.getDeclaredMethod("onCreate", Bundle::class.java) }.isSuccess) found = page
-            walking = page.superclass
-        }
-        return checkNotNull(found) { "No Mode page at or above ${fragment.name} declares onCreate" }
-    }
-
-    private companion object {
-        val SCHEDULE_PAGES = setOf(
-            "com.android.settings.notification.modes.ZenModeSetScheduleFragment",
-            "com.android.settings.notification.modes.ZenModeSetCalendarFragment",
-        )
     }
 }
 
@@ -90,6 +55,7 @@ class ScheduleRemovalHooks(
 private class ScheduleRemovalButton(
     private val menus: MenuApi,
     private val modes: ZenModeApi,
+    private val rules: ModeRuleWriter,
     private val textFor: (Context) -> ModuleText,
     private val refresh: ModePageRefresh,
     private val logger: Logger,
@@ -136,7 +102,7 @@ private class ScheduleRemovalButton(
         activity.finishThen {
             runCatching {
                 modes.clearSchedule(activity, mode)
-                ModeRuleWriter(activity).update(ref.id, modes.rule(mode))
+                rules.update(activity, ref.id, modes.rule(mode))
             }
                 .onSuccess {
                     logger.info("Removed the schedule of mode ${ref.id}")

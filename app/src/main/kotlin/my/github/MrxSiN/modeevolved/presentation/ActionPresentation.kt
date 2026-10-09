@@ -40,7 +40,7 @@ object TaskerTaskPresentation : ActionPresentation<TaskerTaskAction>(TaskerTaskK
 }
 
 /** Every action presentation, in the order a person chooses between them. */
-val ActionPresentations = PresentationSet(listOf(LaunchAppPresentation, BroadcastPresentation, TaskerTaskPresentation))
+val ActionPresentations = PresentationSet(listOf(SystemSettingPresentation, LaunchAppPresentation, BroadcastPresentation, TaskerTaskPresentation))
 
 /** Words for when an action runs. */
 object Timings {

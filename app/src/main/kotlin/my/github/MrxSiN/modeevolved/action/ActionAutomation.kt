@@ -2,6 +2,7 @@ package my.github.MrxSiN.modeevolved.action
 
 import java.util.concurrent.Executor
 
+import my.github.MrxSiN.modeevolved.core.CoalescingTask
 import my.github.MrxSiN.modeevolved.core.Logger
 import my.github.MrxSiN.modeevolved.store.ModeSource
 
@@ -33,9 +34,15 @@ fun interface ActionRunner {
  * a schedule boundary, Quick Settings, another app — and a cooldown is what
  * keeps those from opening the same app three times in a row.
  *
+ * System settings are not run but held for as long as the Mode is on ([SettingClaims]): a Mode
+ * turning on claims them, turning off releases them, and a claim saved while the Mode is on
+ * applies at once. A Mode already on when actions first load keeps the claims it held before,
+ * and nothing is written for it.
+ *
  * Not thread-safe. Every call runs on [thread].
  *
  * @param now a monotonic clock in milliseconds, so a cooldown survives the wall clock moving.
+ * @param settings holds system settings; null where they are unavailable.
  */
 class ActionAutomation(
     private val actions: ModeSource<ModeActions>,
@@ -44,9 +51,16 @@ class ActionAutomation(
     private val thread: Executor,
     private val now: () -> Long,
     private val logger: Logger,
+    private val settings: SettingClaims? = null,
 ) {
 
     private var lists: Map<String, ModeActions> = emptyMap()
+
+    /** Each Mode's system settings, worked out once per reload. */
+    private var claims: Map<String, List<SystemSettingAction>> = emptyMap()
+
+    /** Whether the first look at Mode states is done, which is where claims held before load are settled. */
+    private var looked = false
     private val known = mutableMapOf<String, Boolean>()
     private val lastRun = mutableMapOf<Run, Long>()
     private var observers: List<AutoCloseable> = emptyList()
@@ -54,12 +68,16 @@ class ActionAutomation(
     /** One action of one Mode, which is what a cooldown counts from. */
     private data class Run(val modeId: String, val action: ModeAction)
 
+    // Each notification only says "look again"; a burst of them is one look at the latest state.
+    private val reloadSoon = CoalescingTask(thread, ::reload)
+    private val checkSoon = CoalescingTask(thread, ::check)
+
     fun start() {
         observers = listOf(
-            actions.observe { thread.execute(::reload) },
-            states.observe { thread.execute(::check) },
+            actions.observe(reloadSoon::request),
+            states.observe(checkSoon::request),
         )
-        thread.execute(::reload)
+        reloadSoon.request()
     }
 
     /** Stops watching. Runs no action for what changes afterwards. */
@@ -70,6 +88,14 @@ class ActionAutomation(
 
     private fun reload() {
         lists = actions.all().associateBy { it.modeId }
+        val newClaims = lists.mapValues { it.value.claims }.filterValues { it.isNotEmpty() }
+        if (settings != null && looked) {
+            // A Mode on now whose settings were saved, edited or removed: what was saved applies at once.
+            for ((modeId, on) in known) {
+                if (on && newClaims[modeId] != claims[modeId]) settings.update(modeId, newClaims[modeId].orEmpty())
+            }
+        }
+        claims = newClaims
         known.keys.retainAll(lists.keys)
         // An action that was edited or removed is a different action, and starts without a cooldown.
         lastRun.keys.retainAll { lists[it.modeId]?.items?.contains(it.action) == true }
@@ -78,14 +104,38 @@ class ActionAutomation(
 
     private fun check() {
         for ((modeId, list) in lists) {
-            val active = states.isActive(modeId) ?: continue
+            val active = states.isActive(modeId)
+            if (active == null) {
+                // A Mode deleted while on holds nothing any more; its settings go back.
+                if (known[modeId] == true) settings?.deactivate(modeId)
+                continue
+            }
             val previous = known.put(modeId, active)
-            if (previous == null || previous == active) continue
+            if (previous == null) {
+                if (active) firstSight(modeId)
+                continue
+            }
+            if (previous == active) continue
 
+            if (active) settings?.activate(modeId, claims[modeId].orEmpty()) else settings?.deactivate(modeId)
             val due = list.at(if (active) Timing.START else Timing.END)
+            if (due.isEmpty()) continue
             logger.info("Mode $modeId turned ${if (active) "on" else "off"}: running ${due.size} action(s)")
             due.forEach { run(it, modeId, active) }
         }
+        if (!looked) {
+            looked = true
+            settings?.finishLoad()
+        }
+    }
+
+    /**
+     * A Mode seen on for the first time. At load it keeps whatever it claimed before and nothing
+     * is written. Later, it is a Mode on whose first actions were just saved, which apply.
+     */
+    private fun firstSight(modeId: String) {
+        val held = claims[modeId] ?: return
+        if (looked) settings?.update(modeId, held) else settings?.adopt(modeId, held)
     }
 
     private fun run(action: ModeAction, modeId: String, active: Boolean) {

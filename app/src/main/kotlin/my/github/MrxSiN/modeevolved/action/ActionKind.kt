@@ -69,6 +69,6 @@ class ActionCodec(val actions: KindCodec<ModeAction>) : ModeMapCodec<ModeActions
     companion object {
         private const val ACTIONS = "actions"
 
-        fun standard(): ActionCodec = ActionCodec(KindCodec(listOf(LaunchAppKind, BroadcastKind, TaskerTaskKind)))
+        fun standard(): ActionCodec = ActionCodec(KindCodec(listOf(LaunchAppKind, BroadcastKind, TaskerTaskKind, SystemSettingKind)))
     }
 }

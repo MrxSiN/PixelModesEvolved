@@ -8,10 +8,11 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /** One row this module adds to a preference group. */
 sealed interface PreferenceRow {
@@ -57,40 +58,38 @@ sealed interface PreferenceRow {
  * This module cannot link against the copies inside the Settings APK, and a
  * copy of its own would be a different class the Settings adapter cannot draw.
  * Plain rows are required, so their lookups happen at construction and a
- * missing member fails the page feature up front. The button group is looked
- * up separately: without it, [supportsChoices] is false and callers fall back.
+ * missing member fails the page feature up front. The button group is optional:
+ * without it, [supportsChoices] is false and callers fall back.
  */
-class PreferenceApi(classes: ClassFinder) {
+class PreferenceApi(apis: HostResolver) {
 
-    private val classLoader = classes.classLoader
-    private val preference = classes.load("androidx.preference.Preference")
-    private val group = classes.load("androidx.preference.PreferenceGroup")
-    private val clickListener = classes.load("androidx.preference.Preference\$OnPreferenceClickListener")
-    private val category = classes.load("androidx.preference.PreferenceCategory")
+    private val clickListener = apis.type(S.CLICK_LISTENER)
+    private val onClick = apis.method(S.CLICK_LISTENER_ON_CLICK)
 
-    private val constructor = classes.member("Preference(Context)") { preference.getConstructor(Context::class.java) }
-    private val categoryConstructor = classes.member("PreferenceCategory(Context)") { category.getConstructor(Context::class.java) }
-    private val getKey = classes.member("Preference.getKey()") { preference.getMethod("getKey") }
-    private val getContext = classes.member("Preference.getContext()") { preference.getMethod("getContext") }
-    private val getOrder = classes.member("Preference.getOrder()") { preference.getMethod("getOrder") }
-    private val getPreferenceManager = classes.member("Preference.getPreferenceManager()") { preference.getMethod("getPreferenceManager") }
-    private val setKey = classes.member("Preference.setKey(String)") { preference.getMethod("setKey", String::class.java) }
-    private val setTitle = classes.member("Preference.setTitle(CharSequence)") { preference.getMethod("setTitle", CharSequence::class.java) }
-    private val setSummary = classes.member("Preference.setSummary(CharSequence)") { preference.getMethod("setSummary", CharSequence::class.java) }
-    private val setIcon = classes.member("Preference.setIcon(Drawable)") { preference.getMethod("setIcon", Drawable::class.java) }
-    private val setOrder = classes.member("Preference.setOrder(int)") { preference.getMethod("setOrder", Int::class.javaPrimitiveType) }
-    private val setPersistent = classes.member("Preference.setPersistent(boolean)") { preference.getMethod("setPersistent", Boolean::class.javaPrimitiveType) }
-    private val setIconSpaceReserved = classes.member("Preference.setIconSpaceReserved(boolean)") { preference.getMethod("setIconSpaceReserved", Boolean::class.javaPrimitiveType) }
-    private val setSelectable = classes.member("Preference.setSelectable(boolean)") { preference.getMethod("setSelectable", Boolean::class.javaPrimitiveType) }
-    private val setOnClick = classes.member("Preference.setOnPreferenceClickListener") { preference.getMethod("setOnPreferenceClickListener", clickListener) }
-    private val notifyChanged = classes.member("Preference.notifyChanged()") { preference.getDeclaredMethod("notifyChanged").apply { isAccessible = true } }
-    private val addPreference = classes.member("PreferenceGroup.addPreference(Preference)") { group.getMethod("addPreference", preference) }
-    private val removePreference = classes.member("PreferenceGroup.removePreference(Preference)") { group.getMethod("removePreference", preference) }
-    private val findPreference = classes.member("PreferenceGroup.findPreference(CharSequence)") { group.getMethod("findPreference", CharSequence::class.java) }
-    private val getCount = classes.member("PreferenceGroup.getPreferenceCount()") { group.getMethod("getPreferenceCount") }
-    private val getAt = classes.member("PreferenceGroup.getPreference(int)") { group.getMethod("getPreference", Int::class.javaPrimitiveType) }
+    private val constructor = apis.constructor(S.PREFERENCE_NEW)
+    private val categoryConstructor = apis.constructor(S.CATEGORY_NEW)
+    private val getKey = apis.method(S.PREFERENCE_GET_KEY)
+    private val getContext = apis.method(S.PREFERENCE_GET_CONTEXT)
+    private val getOrder = apis.method(S.PREFERENCE_GET_ORDER)
+    private val getPreferenceManager = apis.method(S.PREFERENCE_GET_MANAGER)
+    private val getManagerScreen = apis.method(S.MANAGER_GET_SCREEN)
+    private val setKey = apis.method(S.PREFERENCE_SET_KEY)
+    private val setTitle = apis.method(S.PREFERENCE_SET_TITLE)
+    private val setSummary = apis.method(S.PREFERENCE_SET_SUMMARY)
+    private val setIcon = apis.method(S.PREFERENCE_SET_ICON)
+    private val setOrder = apis.method(S.PREFERENCE_SET_ORDER)
+    private val setPersistent = apis.method(S.PREFERENCE_SET_PERSISTENT)
+    private val setIconSpaceReserved = apis.method(S.PREFERENCE_SET_ICON_SPACE)
+    private val setSelectable = apis.method(S.PREFERENCE_SET_SELECTABLE)
+    private val setOnClick = apis.method(S.PREFERENCE_SET_ON_CLICK)
+    private val notifyChanged = apis.method(S.PREFERENCE_NOTIFY_CHANGED)
+    private val addPreference = apis.method(S.GROUP_ADD)
+    private val removePreference = apis.method(S.GROUP_REMOVE)
+    private val findPreference = apis.method(S.GROUP_FIND)
+    private val getCount = apis.method(S.GROUP_COUNT)
+    private val getAt = apis.method(S.GROUP_GET)
 
-    private val buttonGroup: ButtonGroupApi? = runCatching { ButtonGroupApi(classes) }.getOrNull()
+    private val buttonGroup: ButtonGroupApi? = runCatching { ButtonGroupApi(apis) }.getOrNull()
     /** Whether this Settings build has the expressive connected button group. */
     val supportsChoices: Boolean get() = buttonGroup != null
 
@@ -101,7 +100,7 @@ class PreferenceApi(classes: ClassFinder) {
     /** The screen [preference] is shown on, or null while it is not attached to one. */
     fun screen(preference: Any): Any? {
         val manager = getPreferenceManager.invoke(preference) ?: return null
-        return manager.javaClass.getMethod("getPreferenceScreen").invoke(manager)
+        return getManagerScreen.invoke(manager)
     }
 
     /**
@@ -162,7 +161,7 @@ class PreferenceApi(classes: ClassFinder) {
                 setSummary.invoke(it, row.summary)
                 setIcon.invoke(it, row.icon)
                 setIconSpaceReserved.invoke(it, row.iconSpaceReserved)
-                setOnClick.invoke(it, listener(clickListener, "onPreferenceClick") { true.also { row.onClick() } })
+                setOnClick.invoke(it, listener(clickListener, onClick) { true.also { row.onClick() } })
             }
             is PreferenceRow.Info -> constructor.newInstance(context).also {
                 setTitle.invoke(it, row.title)
@@ -180,26 +179,14 @@ class PreferenceApi(classes: ClassFinder) {
     }
 
     /** `com.android.settingslib.widget.SegmentedButtonPreference`, a Material 3 Expressive connected button group. */
-    private class ButtonGroupApi(classes: ClassFinder) {
-        private val type = classes.find(SettingsClasses.segmentedButton)
-        private val checkedListener =
-            classes.load("com.google.android.material.button.MaterialButtonToggleGroup\$OnButtonCheckedListener")
-
-        private val constructor = classes.member("SegmentedButtonPreference(Context)") {
-            type.getConstructor(Context::class.java)
-        }
-        private val setUpButton = classes.member("SegmentedButtonPreference.setUpButton(int, String, Drawable)") {
-            type.getMethod("setUpButton", Int::class.javaPrimitiveType, String::class.java, Drawable::class.java)
-        }
-        private val setButtonVisibility = classes.member("SegmentedButtonPreference.setButtonVisibility(int, boolean)") {
-            type.getMethod("setButtonVisibility", Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
-        }
-        private val setCheckedIndex = classes.member("SegmentedButtonPreference.setCheckedIndex(int)") {
-            type.getMethod("setCheckedIndex", Int::class.javaPrimitiveType)
-        }
-        private val setOnButtonClickListener = classes.member("SegmentedButtonPreference.setOnButtonClickListener") {
-            type.getMethod("setOnButtonClickListener", checkedListener)
-        }
+    private class ButtonGroupApi(apis: HostResolver) {
+        private val checkedListener = apis.type(S.BUTTON_CHECKED_LISTENER)
+        private val onButtonChecked = apis.method(S.BUTTON_CHECKED)
+        private val constructor = apis.constructor(S.SEGMENTED_BUTTON_NEW)
+        private val setUpButton = apis.method(S.SEGMENTED_BUTTON_SET_UP)
+        private val setButtonVisibility = apis.method(S.SEGMENTED_BUTTON_SET_VISIBILITY)
+        private val setCheckedIndex = apis.method(S.SEGMENTED_BUTTON_SET_CHECKED)
+        private val setOnButtonClickListener = apis.method(S.SEGMENTED_BUTTON_SET_LISTENER)
 
         fun build(context: Context, row: PreferenceRow.Choice): Any = constructor.newInstance(context).also { built ->
             // The layout holds four buttons, all hidden until set up. SettingsLib requires an icon;
@@ -212,7 +199,7 @@ class PreferenceApi(classes: ClassFinder) {
             setCheckedIndex.invoke(built, row.selected)
 
             // onButtonChecked(group, checkedId, isChecked) also fires for the button losing its check.
-            val onChecked = listener(checkedListener, "onButtonChecked") { args ->
+            val onChecked = listener(checkedListener, onButtonChecked) { args ->
                 if (args[2] == true) {
                     val group = args[0] as ViewGroup
                     val index = group.indexOfChild(group.findViewById(args[1] as Int))
@@ -231,10 +218,10 @@ class PreferenceApi(classes: ClassFinder) {
     private companion object {
 
         /** An implementation of the one-method interface [type] that runs [action] when [method] is called. */
-        fun listener(type: Class<*>, method: String, action: (Array<Any?>) -> Any?): Any =
+        fun listener(type: Class<*>, method: Method, action: (Array<Any?>) -> Any?): Any =
             Proxy.newProxyInstance(type.classLoader, arrayOf(type)) { self, called, args ->
                 when (called.name) {
-                    method -> action(args ?: emptyArray())
+                    method.name -> action(args ?: emptyArray())
                     "equals" -> self === args?.get(0)
                     "hashCode" -> System.identityHashCode(self)
                     else -> type.simpleName

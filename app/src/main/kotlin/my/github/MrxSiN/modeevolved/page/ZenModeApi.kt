@@ -1,12 +1,11 @@
 package my.github.MrxSiN.modeevolved.page
 
-import android.annotation.SuppressLint
 import android.app.AutomaticZenRule
 import android.content.Context
 import android.net.Uri
 
-import my.github.MrxSiN.modeevolved.dex.ClassFinder
-import my.github.MrxSiN.modeevolved.dex.SettingsClasses
+import my.github.MrxSiN.modeevolved.compat.SettingsApis as S
+import my.github.MrxSiN.modeevolved.dex.HostResolver
 
 /**
  * Reflection boundary around Settings' `ZenMode` and the framework's `ZenModeConfig`.
@@ -14,25 +13,19 @@ import my.github.MrxSiN.modeevolved.dex.SettingsClasses
  * Changing a Mode's schedule goes through the same `ZenMode` method the stock
  * schedule chooser calls, so the rule's type, owner and description stay the
  * way Settings itself would leave them.
+ *
+ * Who a Mode is ([ref]) is looked up at once; its rule and schedule only when first
+ * asked for, since the Mode page draws its rows without them and only loses the
+ * schedule warning when they are gone.
  */
-// Settings runs as the system uid, so hidden framework members are reachable.
-@SuppressLint("PrivateApi")
-class ZenModeApi(classes: ClassFinder) {
+class ZenModeApi(private val apis: HostResolver) {
 
-    private val zenMode = classes.find(SettingsClasses.zenMode)
-    private val getRule = classes.member("ZenMode.getRule()") { zenMode.getDeclaredMethod("getRule").apply { isAccessible = true } }
-    private val getId = classes.member("ZenMode.getId()") { zenMode.getMethod("getId") }
-    private val getName = classes.member("ZenMode.getName()") { zenMode.getMethod("getName") }
-    private val setCondition = classes.member("ZenMode.setCustomModeConditionId(Context, Uri)") {
-        zenMode.getMethod("setCustomModeConditionId", Context::class.java, Uri::class.java)
-    }
-    // Hidden on AutomaticZenRule: the app that owns the rule.
-    private val getPackageName = classes.member("AutomaticZenRule.getPackageName()") {
-        AutomaticZenRule::class.java.getMethod("getPackageName")
-    }
-    private val manualCondition = classes.member("ZenModeConfig.toCustomManualConditionId()") {
-        Class.forName("android.service.notification.ZenModeConfig").getMethod("toCustomManualConditionId")
-    }
+    private val getId = apis.method(S.ZEN_MODE_GET_ID)
+    private val getName = apis.method(S.ZEN_MODE_GET_NAME)
+    private val getRule by lazy { apis.method(S.ZEN_MODE_GET_RULE) }
+    private val setCondition by lazy { apis.method(S.ZEN_MODE_SET_CONDITION) }
+    private val getPackageName by lazy { apis.method(S.AUTOMATIC_ZEN_RULE_GET_PACKAGE) }
+    private val manualCondition by lazy { apis.method(S.ZEN_MODE_CONFIG_MANUAL_CONDITION) }
 
     fun ref(mode: Any) = ModeRef(getId.invoke(mode) as String, getName.invoke(mode) as String)
 

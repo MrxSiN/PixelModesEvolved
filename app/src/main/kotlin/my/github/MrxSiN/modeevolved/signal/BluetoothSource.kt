@@ -15,13 +15,19 @@ import my.github.MrxSiN.modeevolved.engine.SignalSource
 import my.github.MrxSiN.modeevolved.trigger.Signal
 import my.github.MrxSiN.modeevolved.trigger.StateUpdate
 
-/** Connected Bluetooth devices by hardware address. */
+/**
+ * Connected Bluetooth devices by hardware address.
+ *
+ * @param isConnected whether a bonded device is connected now, or null when this build
+ * cannot say; then only devices that connect after the source starts are seen.
+ */
 // Runs inside system_server, which holds every permission these calls check.
 @SuppressLint("MissingPermission")
 class BluetoothSource(
     private val context: Context,
     private val handler: Handler,
     private val logger: Logger,
+    private val isConnected: ((BluetoothDevice) -> Boolean)?,
 ) : SignalSource {
 
     override val signal: Signal = Signal.BLUETOOTH
@@ -31,12 +37,13 @@ class BluetoothSource(
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                BluetoothDevice.ACTION_ACL_CONNECTED -> intent.device()?.let { connected += it }
-                BluetoothDevice.ACTION_ACL_DISCONNECTED -> intent.device()?.let { connected -= it }
-                BluetoothAdapter.ACTION_STATE_CHANGED -> connected.clear()
+            val changed = when (intent.action) {
+                BluetoothDevice.ACTION_ACL_CONNECTED -> intent.device()?.let(connected::add) == true
+                BluetoothDevice.ACTION_ACL_DISCONNECTED -> intent.device()?.let(connected::remove) == true
+                BluetoothAdapter.ACTION_STATE_CHANGED -> connected.isNotEmpty().also { connected.clear() }
+                else -> false
             }
-            emit()
+            if (changed) emit()
         }
     }
 
@@ -65,17 +72,13 @@ class BluetoothSource(
         publish?.invoke { it.copy(bluetoothDevices = snapshot) }
     }
 
-    /**
-     * Devices connected before the receiver existed, such as a car at boot.
-     *
-     * `BluetoothDevice.isConnected` is a system API, reached by reflection.
-     */
+    /** Devices connected before the receiver existed, such as a car at boot. */
     private fun alreadyConnected(): Set<String> = runCatching {
+        val isConnected = isConnected ?: return emptySet()
         val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
             ?: return emptySet()
-        val isConnected = BluetoothDevice::class.java.getMethod("isConnected")
         adapter.bondedDevices.orEmpty()
-            .filter { isConnected.invoke(it) as Boolean }
+            .filter(isConnected)
             .mapTo(mutableSetOf()) { it.address.uppercase() }
     }.getOrElse {
         logger.warn("Could not read connected Bluetooth devices", it)

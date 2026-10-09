@@ -56,7 +56,11 @@ data class ModeActions(
     override val items: List<ModeAction> = emptyList(),
 ) : ModeItems<ModeActions, ModeAction> {
 
-    fun at(timing: Timing): List<ModeAction> = items.filter { it.timing == timing }
+    /** The actions that run once at [timing]. System settings are held instead, by `SettingClaims`. */
+    fun at(timing: Timing): List<ModeAction> = items.filter { it.timing == timing && it !is SystemSettingAction }
+
+    /** The settings this Mode holds while it is on. */
+    val claims: List<SystemSettingAction> get() = items.filterIsInstance<SystemSettingAction>()
 
     override fun plus(item: ModeAction): ModeActions = if (item in items) this else copy(items = items + item)
 
