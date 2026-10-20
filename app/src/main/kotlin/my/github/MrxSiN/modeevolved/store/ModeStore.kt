@@ -65,7 +65,15 @@ class SecureSettingsStore<L : ModeItems<L, *>>(
     private val codec: ModeMapCodec<L>,
 ) : ModeStore<L> {
 
-    override fun all(): List<L> = codec.decode(Settings.Secure.getString(resolver, key))
+    /** The last text read and what it decoded to, swapped as one, so a page refresh does not parse an unchanged entry. */
+    private var decoded: Pair<String?, List<L>> = null to emptyList()
+
+    override fun all(): List<L> {
+        val text = Settings.Secure.getString(resolver, key)
+        val last = decoded
+        if (last.first == text) return last.second
+        return codec.decode(text).also { decoded = text to it }
+    }
 
     override fun get(modeId: String): L? = all().firstOrNull { it.modeId == modeId }
 

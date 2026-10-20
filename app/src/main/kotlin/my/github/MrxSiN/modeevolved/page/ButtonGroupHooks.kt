@@ -93,9 +93,12 @@ class ButtonGroupHooks(
         row.setPaddingRelative(row.paddingStart, vertical, row.paddingEnd, vertical)
     }
 
+    /** SettingsLib view ids by name, looked up once: they cannot change while the process runs. */
+    private val ids = HashMap<String, Int>()
+
     /** A SettingsLib view id, merged into the Settings package at build time. */
     private fun id(view: View, name: String): Int =
-        view.resources.getIdentifier(name, "id", view.context.packageName)
+        ids.getOrPut(name) { view.resources.getIdentifier(name, "id", view.context.packageName) }
 
     private companion object {
         const val VERTICAL_PADDING_DP = 12
