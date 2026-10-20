@@ -76,5 +76,11 @@ class LocationUpdates(
 
 }
 
-/** Who inside system_server is calling, which location, Bluetooth and other services require of it. */
-const val ATTRIBUTION_TAG = "PixelModesEvolved"
+/**
+ * Who inside system_server is calling, which location, Bluetooth and other services require of it.
+ *
+ * It has to be a tag the `android` package declares: AppOps checks every location delivery against
+ * that manifest, and a tag of this module's own was dropped with an error logged each time. Of the
+ * ones declared, this names what a Mode's place and flight rules are.
+ */
+const val ATTRIBUTION_TAG = "GeofencingService"
