@@ -73,6 +73,7 @@ class SettingsPart(
         features.install(ScheduleRemovalHooks(xposed, apis, logger, ::text, refresh))
         features.install(EditorResultHooks(xposed, apis, logger))
         features.install(ButtonGroupHooks(xposed, apis, TriggerSection.KEY_PREFIX, logger))
+        features.install(IconPickerHooks(xposed, apis, logger, ::text))
     }
 
     private fun sections(context: Context, preferences: PreferenceApi): List<ModePageSection> {

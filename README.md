@@ -58,7 +58,7 @@ when the triggers stop being met.
 | **Location** | inside a circle around a place | the fused provider, balanced power, about every 5 minutes |
 | **Movement: on the move** | the phone is moving | the significant motion sensor, one-shot and low power |
 | **Movement: left still** | the phone has not moved for 10 minutes, counted from when the rule starts | the same sensor |
-| **Movement: flying** | on board an aircraft in flight | high-accuracy fixes every 3 minutes: speed and altitude |
+| **Movement: flying** | on board an aircraft in flight | the barometer (cabin pressure), batched in the sensor hub, and high-accuracy fixes every 3 minutes: speed and altitude |
 | **Airplane mode** | airplane mode is on, or off | the `airplane_mode_on` setting |
 
 Triggers are joined in order by **AND** or **OR**, with a connected button group between each
@@ -99,8 +99,12 @@ motion follows `MaterialTheme.motionScheme`.
   any screen. In dark mode it is repainted in the soft greys of Google Maps' dark theme; water takes
   the wallpaper color. Search for a place by name, pan the map under the pin, set the detection
   range, or jump to where you are.
-- **Movement: flying** starts at 100 m/s, or at 50 m/s above 1,500 m, and ends on a fix below
-  25 m/s. It works with airplane mode on.
+- **Movement: flying** starts when the cabin climbs: the barometer falls by 100 hPa (about 850 m)
+  within 12 minutes, which no road allows. It needs no satellite fix, so it works with airplane
+  mode on and the phone in a pocket. Two fixes in a row at 100 m/s, or at 50 m/s above 1,500 m,
+  also start it. It ends once the cabin has descended and the pressure has held steady for 10
+  minutes, on a fix below 25 m/s while the cabin no longer shows cruise, or after 20 minutes with
+  no sign of flight. The barometer is read at 1 Hz into its own FIFO and never wakes the phone.
 
 </details>
 
@@ -195,6 +199,28 @@ a one-shot command, and it needs no second action to undo it.
 
 
 <details open>
+<summary><b>🎨 More Mode icons</b></summary>
+<br>
+
+Android offers 40 icons for a Mode you create. The icon picker now offers 43 more: camping,
+croissant, airplane, flashlight, battery, Bluetooth, night light, dark theme, alarm, laptop,
+headset, camera, microphone, phone, thermostat, padlock, satellite, location pin, printer, music
+and more.
+
+They are all drawn by Android itself. A Mode made in Settings belongs to the system, and SystemUI
+draws its icon in the status bar, Quick Settings and the lock screen from the system's own
+resources, so a picked icon shows everywhere, is saved by name across updates, and stays after
+this module is removed. An icon a build lacks is simply not offered.
+
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/mode-icons.png" width="250"><br><sub>Stock icons, then the added ones</sub></td>
+</tr>
+</table>
+
+</details>
+
+<details open>
 <summary><b>📅 Calendar event filter</b></summary>
 <br>
 
@@ -240,7 +266,7 @@ offers "Set a schedule" again. The Mode's settings, triggers and actions stay.
 
 ## Status
 
-**v0.0.3 — alpha.** Hooks reach into Settings and system_server internals that move between
+**v0.0.4 — alpha.** Hooks reach into Settings and system_server internals that move between
 Android releases. When one moves, the feature that needs it switches itself off, and
 **Compatibility & diagnostics** — at the bottom of the Modes list, under *Create your own
 mode* — says which one went.
@@ -284,7 +310,10 @@ explains the contracts, the fixtures and the security boundary of the editor.
 - System settings belong to the phone's owner (the system user): with another user in the
   foreground they are left alone.
 - **Left still** and **flying** both start out unknown, so a rule reading them is not met until
-  the signal has decided: ten quiet minutes for still, one position fix for flying.
+  the signal has decided: ten quiet minutes for still, the first barometer reading or position fix
+  for flying.
+- Flying is judged from cabin pressure; a cable car rising 1,000 m in under 12 minutes reads as a
+  takeoff. Phones without a barometer fall back to speed alone, which needs satellite fixes.
 
 ## Requirements
 
@@ -320,7 +349,7 @@ itself the next time it is out of sight.
 ```
 Settings (Mode page rows) ──Settings.Secure "mode_evolved_rules"──▶ system_server
                                                                     rules ─▶ TriggerEngine ─▶ NotificationManager
-                                                                    SignalHub (Wi-Fi, Bluetooth, location, movement, airplane) ─┘
+                                                                    SignalHub (Wi-Fi, Bluetooth, location, movement, flight, airplane) ─┘
 ```
 
 - **Settings** (scope `com.android.settings`). After `ZenModeFragment` refreshes, the module
@@ -352,7 +381,8 @@ back.
 - A rule with a wait holds an edge the signals caused for that long and drops it if the answer
   comes back. Load and edit never wait.
 
-Location requests are attributed as `android[PixelModesEvolved]`, visible in `adb shell dumpsys location`.
+Location requests are attributed as `android[GeofencingService]`, visible in `adb shell dumpsys location`.
+The tag has to be one the `android` package declares: AppOps checks every delivery against it.
 
 </details>
 
@@ -462,7 +492,7 @@ signal/             one SignalSource per Android input
 system/             system_server: boot and hot reload, Mode switching, action running
 calendar/           the calendar event filter and its codec
 presentation/       label, icon and description per kind, shared by rows and editor
-page/               Settings: Mode page rows, reflection boundaries, editor launch and results
+page/               Settings: Mode page rows, icon picker, reflection boundaries, editor launch and results
 diagnostics/        the compatibility page and the report the Settings side gathers for it
 editor/             the Compose editor app, one KindEditor per kind
 ```

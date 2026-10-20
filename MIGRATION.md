@@ -24,3 +24,13 @@ hand-off, as before.
   claimed. An unreadable value is ignored, which means no restoration, never a wrong one.
 - Setting ids are stable strings, separate from enum order, so they survive reordering.
 - `resource-ids.txt` gained the new strings and drawables; no existing ID moved.
+
+## v0.0.4
+
+- No stored format changed. Rules, actions and claims read exactly as before; a flying trigger
+  keeps its record and is judged by the new detector.
+- A Mode given one of the extra icons stores it the way Android stores every Mode icon, as a
+  framework resource name (`android:drawable/ic_qs_airplane`). A downgrade, or removing the module,
+  keeps the icon: only the picker loses the extra choices.
+- `resource-ids.txt` gained the new strings; no existing ID moved. Two entries for strings that
+  were added and dropped during development stay pinned, as every ID does.

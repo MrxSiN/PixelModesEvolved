@@ -1,3 +1,52 @@
+# Pixel Modes Evolved v0.0.4
+
+Fourth alpha: the flying trigger now actually notices a flight, and custom Modes get many more
+icons. Tested on a Pixel 8 Pro on **Android 17 QPR1 (October 2026)**, build `CP3A.261005.005`,
+with Vector v2.2. Expect rough edges, and keep a way to recover your phone.
+
+### Flying, from cabin pressure
+
+- **Movement: flying** used to wait for a satellite fix with a speed, which a phone in a pocket
+  inside a cabin rarely gets. It now reads the **barometer**: an airliner's cabin climbs about
+  850 m within minutes of takeoff, and the pressure falls by 100 hPa within 12 minutes. No road
+  climbs that fast, so driving, trains, lifts and weather do not count.
+- Speed still works where there is a fix, but needs two fast fixes in a row, so one bad
+  satellite reading is no longer a flight.
+- A flight ends once the cabin has descended and the pressure has held steady for 10 minutes, on a
+  slow fix once the cabin no longer shows cruise, or after 20 minutes with no sign of flight. A
+  landing seen only through Wi-Fi or cell positions no longer leaves the Mode on for good.
+- The barometer is read at its slowest rate into the sensor hub's own buffer and never wakes the
+  phone. Phones without one keep the speed-only detection.
+
+### More Mode icons
+
+- The icon picker for a Mode you create offers **43 more icons** after Android's 40: camping,
+  croissant, airplane, flashlight, battery, Bluetooth, night light, alarm, laptop, headset,
+  camera, microphone, phone, thermostat, padlock, satellite, location pin, printer, music and more.
+- They are Android's own drawables, so the status bar, Quick Settings and lock screen show them,
+  and a Mode keeps its icon after an update or if the module is removed.
+
+### Fixes
+
+- AppOps no longer logs `attributionTag PixelModesEvolved not declared in manifest of android` on
+  every location delivery: requests are attributed to a tag the `android` package declares.
+- A Mode page no longer parses the stored rules again when nothing changed, and AND/OR rows no
+  longer look their views up by name on every bind.
+
+### Install
+
+1. Install `PixelModesEvolved-v0.0.4.apk`
+2. Enable Pixel Modes Evolved in Vector (static scope: System Framework and Settings)
+3. Reboot once, or let system_server hot reload if you are updating
+4. Settings → Modes → a Mode → Mode settings
+
+### Notes
+
+- Upgrading keeps your triggers, actions and Mode icons.
+- If a build signed with a different key is installed, uninstall it first.
+
+---
+
 # Pixel Modes Evolved v0.0.3
 
 Third alpha: Modes can now change device settings, and the module does less work inside

@@ -21,7 +21,8 @@ verbatim as `LegacyTriggerEngine` in `engine/TriggerEngineParityTest.kt`.
 | Bluetooth: connect/disconnect/adapter off clears | identical state; fewer duplicate emits | same argument |
 | Bluetooth address match is case-insensitive on the stored address | identical | `key` is `address.uppercase()`, outside equality |
 | Provider start/stop on demand, retry after failed start | unchanged code | `SignalHubTest` |
-| Location stale-fix drop, accuracy, fused/network choice, flight detector | unchanged code | `FixesTest`, `FlightDetectorTest` |
+| Location stale-fix drop, accuracy, fused/network choice | unchanged code | `FixesTest` |
+| Flight detector | changed in v0.0.4 on purpose: cabin pressure starts a flight, one fast fix no longer does, a flight nothing confirms for 20 min ends | `FlightDetectorTest` |
 | Motion one-shot sensor, 10 min still timer, unknown at start | unchanged code | `MovementSourceTest` |
 | Actions on Mode change, cooldowns, boot never replays | unchanged code | `ModeAutomationTest`, `ActionTest` |
 | Rule/action storage format, legacy `match` field | unchanged code | `RuleCodecTest`, `EditorCodecTest` |

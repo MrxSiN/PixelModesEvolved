@@ -78,6 +78,7 @@
     <string name="feature_button_group">AND / OR button group</string>
     <string name="feature_calendar_row">Event row on Calendar events</string>
     <string name="feature_schedule_removal">Remove schedule button</string>
+    <string name="feature_icon_picker">More Mode icons</string>
     <string name="feature_settings_restart">Settings restart after an update</string>
     <string name="feature_automation_start">Automation start at boot</string>
     <string name="feature_calendar_filter">Calendar event filter</string>
@@ -124,13 +125,13 @@
 
     <string name="trigger_movement">Movement</string>
     <string name="trigger_movement_hint">When the phone is on the move, left still or flying</string>
-    <string name="movement_intro">On the move and left still use the low-power motion sensor, so they cost almost no battery. Flying checks satellite position every few minutes.</string>
+    <string name="movement_intro">On the move and left still use the low-power motion sensor, so they cost almost no battery. Flying reads the barometer and checks position every few minutes.</string>
     <string name="movement_moving">While on the move</string>
     <string name="movement_moving_detail">Walking, running, cycling or in a vehicle. Turns on as soon as motion is detected.</string>
     <string name="movement_still">While left still</string>
     <string name="movement_still_detail">The phone has not moved for 10 minutes, such as resting on a desk or nightstand.</string>
     <string name="movement_flying">While flying</string>
-    <string name="movement_flying_detail">On board an aircraft in flight, judged from speed and altitude. Works with airplane mode on. Ends after landing.</string>
+    <string name="movement_flying_detail">On board an aircraft in flight, judged from cabin pressure, speed and altitude. Works with airplane mode on and the phone in a pocket. Driving does not count. Ends after landing.</string>
 
     <string name="trigger_airplane">Airplane mode</string>
     <string name="trigger_airplane_hint">When airplane mode is on or off</string>
@@ -272,4 +273,49 @@
     <string name="setting_note_media_volume">Android may keep media volume lower to protect your hearing while headphones are connected.</string>
     <string name="setting_note_ringer">Do Not Disturb settings of an active mode still decide what can make sound.</string>
     <string name="setting_note_wifi">Turning off Wi-Fi also ends Wi-Fi triggers until it is back on.</string>
+
+    <!-- Descriptions of the extra Mode icons, read by screen readers in the icon picker. -->
+    <string name="mode_icon_zen_mode_icon_camping">Camping tent</string>
+    <string name="mode_icon_zen_mode_icon_croissant">Croissant</string>
+    <string name="mode_icon_qs_airplane">Airplane</string>
+    <string name="mode_icon_qs_flashlight">Flashlight</string>
+    <string name="mode_icon_qs_battery_saver">Battery saver</string>
+    <string name="mode_icon_battery">Battery</string>
+    <string name="mode_icon_qs_bluetooth">Bluetooth</string>
+    <string name="mode_icon_qs_night_display_on">Night light</string>
+    <string name="mode_icon_qs_ui_mode_night">Dark theme</string>
+    <string name="mode_icon_qs_auto_rotate">Screen rotation</string>
+    <string name="mode_icon_qs_one_handed_mode">One-handed</string>
+    <string name="mode_icon_audio_alarm">Alarm bell</string>
+    <string name="mode_icon_audio_vol_mute">Muted speaker</string>
+    <string name="mode_icon_notifications">Notification bell</string>
+    <string name="mode_icon_bt_laptop">Laptop</string>
+    <string name="mode_icon_bt_headset_hfp">Headset</string>
+    <string name="mode_icon_bt_hearing_aid">Hearing aid</string>
+    <string name="mode_icon_bt_misc_hid">D-pad</string>
+    <string name="mode_icon_camera">Camera</string>
+    <string name="mode_icon_mic">Microphone</string>
+    <string name="mode_icon_phone">Phone call</string>
+    <string name="mode_icon_mobile_phone">Mobile phone</string>
+    <string name="mode_icon_dual_screen">Foldable</string>
+    <string name="mode_icon_thermostat">Thermostat</string>
+    <string name="mode_icon_fingerprint">Fingerprint</string>
+    <string name="mode_icon_lock">Padlock</string>
+    <string name="mode_icon_satellite_alt_24px">Satellite</string>
+    <string name="mode_icon_signal_location">Location pin</string>
+    <string name="mode_icon_thread_network">Thread network</string>
+    <string name="mode_icon_widgets">Widgets</string>
+    <string name="mode_icon_apps">Apps</string>
+    <string name="mode_icon_visibility">Eye</string>
+    <string name="mode_icon_account_circle">Person</string>
+    <string name="mode_icon_pan_tool">Raised hand</string>
+    <string name="mode_icon_print">Printer</string>
+    <string name="mode_icon_screenshot">Screenshot</string>
+    <string name="mode_icon_mode_edit">Pencil</string>
+    <string name="mode_icon_feedback">Feedback</string>
+    <string name="mode_icon_folder_24dp">Folder</string>
+    <string name="mode_icon_doc_document">Document</string>
+    <string name="mode_icon_doc_image">Picture</string>
+    <string name="mode_icon_doc_video">Video</string>
+    <string name="mode_icon_doc_audio">Music note</string>
 </resources>

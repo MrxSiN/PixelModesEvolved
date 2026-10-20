@@ -4,6 +4,7 @@ import my.github.MrxSiN.modeevolved.compat.Sdk.AUTOMATIC_ZEN_RULE
 import my.github.MrxSiN.modeevolved.compat.Sdk.BOOLEAN
 import my.github.MrxSiN.modeevolved.compat.Sdk.BUNDLE
 import my.github.MrxSiN.modeevolved.compat.Sdk.CHAR_SEQUENCE
+import my.github.MrxSiN.modeevolved.compat.Sdk.COLLECTION
 import my.github.MrxSiN.modeevolved.compat.Sdk.CONTEXT
 import my.github.MrxSiN.modeevolved.compat.Sdk.DRAWABLE
 import my.github.MrxSiN.modeevolved.compat.Sdk.INT
@@ -100,6 +101,16 @@ object SettingsApis {
     val SCHEDULE_CALENDAR_FRAGMENT = type("$MODES.ZenModeSetCalendarFragment")
 
     val CALENDAR_CONTROLLER = type("$MODES.ZenModeSetCalendarPreferenceController")
+
+    /** The icons offered when a Mode's icon is changed: framework drawables, read from a Settings array. */
+    val ICON_OPTIONS = type("$MODES.IconOptionsProviderImpl")
+    val ICON_OPTIONS_CONTEXT = FieldApi(ICON_OPTIONS, "mContext")
+    val ICON_OPTIONS_GET_ICONS = MethodApi(ICON_OPTIONS, "getIcons", scope = Scope.HOOK)
+    val ICON_INFO = type("$MODES.IconOptionsProvider\$IconInfo")
+    val ICON_INFO_NEW = ConstructorApi(ICON_INFO, listOf(INT, STRING))
+    val ICON_INFO_RES_ID = MethodApi(ICON_INFO, "resId")
+    val IMMUTABLE_LIST = type("com.google.common.collect.ImmutableList")
+    val IMMUTABLE_LIST_COPY_OF = MethodApi(IMMUTABLE_LIST, "copyOf", listOf(COLLECTION))
 
     // SettingsLib's Mode, the value every page hands around.
 

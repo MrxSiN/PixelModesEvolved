@@ -130,6 +130,7 @@ object Sdk {
     val EXECUTOR = SdkType("java.util.concurrent.Executor")
     val BOOLEAN = SdkType("boolean")
     val STRING = SdkType("java.lang.String")
+    val COLLECTION = SdkType("java.util.Collection")
     val CHAR_SEQUENCE = SdkType("java.lang.CharSequence")
     val CONTEXT = SdkType("android.content.Context")
     val INTENT = SdkType("android.content.Intent")

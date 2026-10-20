@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersion = "0.0.3"
+val appVersion = "0.0.4"
 
 /*
  * Vector hot reloads system_server only when the installed versionCode differs from the loaded

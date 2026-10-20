@@ -18,6 +18,7 @@ class android.app.AutomaticZenRule
   method getName()
   method getPackageName()
 class android.app.NotificationManager
+  field mContext
   method updateAutomaticZenRule(java.lang.String,android.app.AutomaticZenRule)
   method updateAutomaticZenRule(java.lang.String,android.app.AutomaticZenRule,boolean)
 class android.content.Context
@@ -28,6 +29,7 @@ class android.service.notification.ZenModeConfig
   method toCustomManualConditionId()
 class android.view.ContextThemeWrapper extends android.content.ContextWrapper
 class android.view.View
+  field mContext
   method getContext()
   method getId()
   method onActivityResult(int,int,android.content.Intent)
@@ -67,6 +69,7 @@ class androidx.lifecycle.Lifecycle$State extends java.lang.Enum
   field RESUMED
 class androidx.lifecycle.LifecycleOwner
 class androidx.preference.Preference
+  field mContext
   method getContext()
   method getId()
   method getKey()
@@ -114,6 +117,7 @@ class androidx.preference.PreferenceGroupAdapter extends androidx.recyclerview.w
   method onBindViewHolder(androidx.preference.PreferenceViewHolder,int)
   method onBindViewHolder(androidx.recyclerview.widget.RecyclerView$ViewHolder,int)
 class androidx.preference.PreferenceManager
+  field mContext
   method findPreference(java.lang.CharSequence)
   method getContext()
   method getPreferenceScreen()
@@ -156,6 +160,13 @@ class com.android.settings.dashboard.RestrictedDashboardFragment extends com.and
 class com.android.settings.notification.modes.AbstractZenModePreferenceController extends com.android.settingslib.core.AbstractPreferenceController
   method updateState(androidx.preference.Preference)
   method updateState(androidx.preference.Preference,com.android.settingslib.notification.modes.ZenMode) abstract
+class com.android.settings.notification.modes.IconOptionsProvider$IconInfo extends java.lang.Record
+  field resId
+  method resId()
+  constructor (int,java.lang.String)
+class com.android.settings.notification.modes.IconOptionsProviderImpl
+  field mContext
+  method getIcons()
 class com.android.settings.notification.modes.ZenModeFragment extends com.android.settings.notification.modes.ZenModeFragmentBase
   method getMode()
   method onCreate(android.os.Bundle)
@@ -175,9 +186,11 @@ class com.android.settings.notification.modes.ZenModeSetScheduleFragment extends
   method onCreate(android.os.Bundle)
   method onStart()
 class com.android.settings.notification.modes.ZenModesFragmentBase extends com.android.settings.dashboard.RestrictedDashboardFragment
+  field mContext
   method onStart()
   method onUpdatedZenModeState() abstract
 class com.android.settingslib.core.AbstractPreferenceController
+  field mContext
   method updateState(androidx.preference.Preference)
 class com.android.settingslib.notification.modes.ZenMode
   method getId()
@@ -212,7 +225,15 @@ class com.google.android.material.button.MaterialButtonGroup extends android.wid
 class com.google.android.material.button.MaterialButtonToggleGroup extends com.google.android.material.button.MaterialButtonGroup
 class com.google.android.material.button.MaterialButtonToggleGroup$OnButtonCheckedListener
   method onButtonChecked(com.google.android.material.button.MaterialButtonToggleGroup,int,boolean) abstract
+class com.google.common.collect.ImmutableCollection extends java.util.AbstractCollection
+class com.google.common.collect.ImmutableList extends com.google.common.collect.ImmutableCollection
+  method copyOf([Ljava.lang.Object;)
+  method copyOf(java.lang.Iterable)
+  method copyOf(java.util.Collection)
+  method copyOf(java.util.Iterator)
 class java.lang.Enum
+class java.lang.Record
+class java.util.AbstractCollection
 locate com.android.settings.notification.modes.ZenModeFragment com.android.settings.notification.modes.ZenModeFragment
 locate com.android.settings.notification.modes.ZenModeFragmentBase com.android.settings.notification.modes.ZenModeFragmentBase
 locate com.android.settings.notification.modes.ZenModesFragmentBase com.android.settings.notification.modes.ZenModesFragmentBase

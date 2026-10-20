@@ -126,6 +126,13 @@ object FeatureContracts {
                 S.SCHEDULE_TIME_FRAGMENT, S.SCHEDULE_CALENDAR_FRAGMENT,
             ) + appBarMenu + modeIdentity + modeSchedule + ruleWriter,
         ),
+        FeatureContract(
+            Feature.ICON_PICKER,
+            required = listOf(
+                S.ICON_OPTIONS, S.ICON_OPTIONS_CONTEXT, S.ICON_OPTIONS_GET_ICONS,
+                S.ICON_INFO, S.ICON_INFO_NEW, S.ICON_INFO_RES_ID, S.IMMUTABLE_LIST, S.IMMUTABLE_LIST_COPY_OF,
+            ),
+        ),
         FeatureContract(Feature.SETTINGS_RESTART, required = listOf(S.APPLICATION, S.APPLICATION_ON_CREATE)),
 
         FeatureContract(

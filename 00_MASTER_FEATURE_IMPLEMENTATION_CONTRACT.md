@@ -99,6 +99,7 @@ Existing project behavior that must not regress includes, when still present aft
 - Mode actions and action cooldown semantics;
 - calendar event filter;
 - schedule removal;
+- extra Mode icons in the icon picker;
 - hot reload/update;
 - boot semantics;
 - compatibility diagnostics;

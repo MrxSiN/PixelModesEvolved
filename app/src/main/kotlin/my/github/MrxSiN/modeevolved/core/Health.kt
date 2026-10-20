@@ -19,6 +19,7 @@ enum class Feature(val id: String, val logName: String, val host: Host) {
     BUTTON_GROUP("buttonGroup", "button groups", Host.SETTINGS),
     CALENDAR_ROW("calendarRow", "Calendar events", Host.SETTINGS),
     SCHEDULE_REMOVAL("scheduleRemoval", "schedule removal", Host.SETTINGS),
+    ICON_PICKER("iconPicker", "Mode icons", Host.SETTINGS),
     SETTINGS_RESTART("settingsRestart", "app start", Host.SETTINGS),
 
     AUTOMATION_START("automationStart", "boot completed", Host.SYSTEM_SERVER),

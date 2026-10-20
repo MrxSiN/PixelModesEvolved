@@ -9,7 +9,7 @@ the device from suspend.
 | Wi-Fi | a rule reads `WIFI` | `NetworkCallback` (Wi-Fi transport, location info) | connectivity events; now forwarded only when an SSID changes | no rule reads it |
 | Bluetooth | `BLUETOOTH` | exported receiver: ACL connect/disconnect, adapter state | per broadcast; forwarded only when the set changes | same |
 | Location | `LOCATION` | fused (else network), `BALANCED_POWER_ACCURACY` | 5 min, min 60 s; last-known fix used only if ≤ 10 min old | same |
-| Flight | `FLIGHT` (a flying trigger) | fused, `HIGH_ACCURACY` | 3 min, min 30 s; fixes > 2 min old dropped | same |
+| Flight | `FLIGHT` (a flying trigger) | fused, `HIGH_ACCURACY`; barometer, non-wakeup, batched in the sensor hub FIFO | fixes 3 min, min 30 s, > 2 min old dropped; pressure 1 Hz, delivered at most every 5 min or on the next wake, one reading per 30 s kept | same |
 | Movement | `MOVEMENT` | `TYPE_SIGNIFICANT_MOTION`, one-shot wake-up, re-armed per event | per motion; one 10 min still timer, replaced on each motion | same |
 | Airplane | `AIRPLANE` | `ContentObserver` on `airplane_mode_on` | per toggle | same |
 | Rules | always (feature on) | `ContentObserver` on `mode_evolved_rules`, coalesced | per save | hand-off |
@@ -41,7 +41,8 @@ no new wakeup source was added.
 ## On-device confirmation (Pixel 8 Pro, CP3A.261005.005, rule `wifi OR wifi OR area`)
 
 `scripts/bench-device.sh providers` on baseline and rewrite: exactly one location request,
-`fused BALANCED 5 min, min 1 min`, attributed `PixelModesEvolved`; old registration removed at
+`fused BALANCED 5 min, min 1 min`, then attributed `PixelModesEvolved` (since v0.0.4 `GeofencingService`, a tag
+the `android` package declares, so AppOps stops logging an error on every delivery); old registration removed at
 hand-off before the new one was added; no significant-motion listener from system_server (no
 rule reads movement); 0 alarms; 0 wakelocks. Same on both builds. Idle 15 min: 21 runs / 12.1 ms
 (baseline) against 20 runs / 11.9 ms (rewrite), PERFORMANCE.md.
@@ -58,3 +59,14 @@ rule reads movement); 0 alarms; 0 wakelocks. Same on both builds. Idle 15 min: 2
   a few services whether hardware exists; it does nothing afterwards.
 - A setting a Mode turns on can itself cost power (hotspot, Bluetooth, brightness, Smooth Display):
   that is the person's choice, and the module turns it back when the Mode ends.
+
+## v0.0.4: flight detection
+
+- The flying trigger adds the barometer: `TYPE_PRESSURE`, non-wakeup, 1 Hz (its slowest rate),
+  `maxReportLatency` 5 min. The ICP20100 on a Pixel 8 Pro has a 3,000-event FIFO, so readings
+  queue in the sensor hub and arrive whenever the phone is awake anyway, such as for the flight's
+  own 3-minute location request. It never wakes the phone. One reading per 30 s is kept and the
+  rest dropped at the listener; the state is published only when the answer changes.
+- Registered only while a rule reads `FLIGHT`, released with the rest of the source; a hot reload
+  was seen to unregister before registering again (`dumpsys sensorservice`).
+- Nothing changed for a phone with no flying trigger.

@@ -14,6 +14,7 @@ object FeatureLabels {
         Feature.BUTTON_GROUP -> R.string.feature_button_group
         Feature.CALENDAR_ROW -> R.string.feature_calendar_row
         Feature.SCHEDULE_REMOVAL -> R.string.feature_schedule_removal
+        Feature.ICON_PICKER -> R.string.feature_icon_picker
         Feature.SETTINGS_RESTART -> R.string.feature_settings_restart
         Feature.AUTOMATION_START -> R.string.feature_automation_start
         Feature.CALENDAR_FILTER -> R.string.feature_calendar_filter
