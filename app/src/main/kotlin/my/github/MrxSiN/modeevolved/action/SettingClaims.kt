@@ -96,12 +96,16 @@ class SettingClaims(
         for (index in settings.size - 1 downTo 0) {
             if (actions.none { it.setting.ordinal == index }) release(index, modeId)
         }
+        // As in activate: every new baseline is read before anything is written, in setting order.
+        val changed = BooleanArray(settings.size)
         for (action in actions) {
             val held = claims[action.setting.ordinal].find { it.modeId == modeId }
             if (held != null && held.value == action.value && held.restore == action.restore) continue
             put(action, modeId, order)
-            settle(action.setting.ordinal, modeId)
+            changed[action.setting.ordinal] = true
         }
+        for (index in settings.indices) if (changed[index]) guarded(settings[index]) { own(index) }
+        for (index in settings.indices) if (changed[index]) settle(index, modeId)
         if (actions.isEmpty()) activated.remove(modeId)
         save()
     }

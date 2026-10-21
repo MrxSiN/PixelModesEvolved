@@ -199,6 +199,21 @@ class SettingClaimsTest {
         assertEquals(2, coupled.device[SystemSetting.RING_VOLUME])
     }
 
+    @Test
+    fun `a claim saved while on reads every new baseline before writing`() {
+        val coupled = CoupledRinger()
+        coupled.device[SystemSetting.RINGER_MODE] = SystemSetting.RINGER_VIBRATE
+        coupled.device[SystemSetting.RING_VOLUME] = 2
+        coupled.device[BRIGHTNESS] = 70
+        val claims = SettingClaims(coupled, SilentLogger) {}
+        claims.activate("a", listOf(set(BRIGHTNESS, 30)))
+        // Listed volume first: writing it moves the ringer before the ringer's baseline is read.
+        claims.update("a", listOf(set(BRIGHTNESS, 30), set(SystemSetting.RING_VOLUME, 5), set(SystemSetting.RINGER_MODE, SystemSetting.RINGER_NORMAL)))
+        claims.deactivate("a")
+        assertEquals(SystemSetting.RINGER_VIBRATE, coupled.device[SystemSetting.RINGER_MODE])
+        assertEquals(2, coupled.device[SystemSetting.RING_VOLUME])
+    }
+
     // Edits while on.
 
     @Test
