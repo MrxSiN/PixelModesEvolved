@@ -60,6 +60,8 @@ when the triggers stop being met.
 | **Movement: left still** | the phone has not moved for 10 minutes, counted from when the rule starts | the same sensor |
 | **Movement: flying** | on board an aircraft in flight | the barometer (cabin pressure), batched in the sensor hub, and high-accuracy fixes every 3 minutes: speed and altitude |
 | **Airplane mode** | airplane mode is on, or off | the `airplane_mode_on` setting |
+| **Power** | connected to power (cable, wireless charger or dock), or running on battery | power connected/disconnected broadcasts only; the battery level broadcast is never registered for |
+| **Headphones** | wired or USB headphones are plugged in, or none are (connection, not playback; Bluetooth headphones use the Bluetooth trigger) | the audio service's device callback |
 
 Triggers are joined in order by **AND** or **OR**, with a connected button group between each
 pair. As in ordinary logic, AND binds before OR: `Home Wi-Fi AND left still OR Car` means
@@ -276,7 +278,11 @@ active and at what version, the Android build, Settings version, libxposed API a
 under it, each feature with Compatible or Unavailable and the reason, how many of its hooks
 resolved, how many were found by signature after a rename or by a fallback signature, how many
 failed — and then every class, method and field it depends on, one row each, with optional ones
-marked as such. **Copy compatibility report** puts the
+marked as such. **Recent Mode decisions** says why each Mode a trigger automates last changed —
+its triggers changed (and which kinds of signal), it is waiting for them to hold, they were saved,
+removed, or no longer held at start. Only the cause and signal kinds are kept: no network names,
+device addresses, places or Mode names. A Mode switched by hand, a schedule or another app is not
+listed, because that cause is not visible to this module. **Copy compatibility report** puts the
 whole thing on the clipboard for a bug report.
 
 ### Compatibility
