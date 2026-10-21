@@ -22,7 +22,11 @@ A rule is met when every trigger of any one group is met. Every trigger is evalu
 Per evaluated rule, with `met` the current answer:
 
 1. `decision == met` → cancel any wait (the edge came back); done.
-2. First decision (`NONE`) and not met and not an edit → record `OFF` silently (load never turns a Mode off).
+2. First decision (`NONE`) and not met and not an edit → record `OFF` silently (load never turns off
+   a Mode a person or a schedule switched on), unless `ModeController.switchedOnHere` says this
+   module switched it on and it is still on: then switch it off. Android keeps a rule's condition
+   across a reboot, so without that a Mode left on by a trigger that no longer holds stayed on.
+   The record is `Settings.Secure` `mode_evolved_owned`, kept by `NotificationModeController`.
 3. Already waiting for this same `met` → done (a wait covers a whole flapping burst).
 4. Otherwise cancel any wait; apply at once when it is an edit (`reset = true`), the first
    decision, or `stabilityMillis == 0`; else wait `stabilityMillis` and then apply.

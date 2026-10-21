@@ -73,7 +73,12 @@ class AutomationStarter(
     private fun triggers(context: Context, handler: Handler): ModeAutomation {
         val delays = HandlerDelays(handler)
         val rules = SecureSettingsStore(context.contentResolver, SecureSettingsStore.RULES_KEY, RuleCodec.standard())
-        val modes = NotificationModeController(context.getSystemService(NotificationManager::class.java), logger)
+        val resolver = context.contentResolver
+        val modes = NotificationModeController(
+            context.getSystemService(NotificationManager::class.java),
+            logger,
+            Settings.Secure.getString(resolver, OWNED_KEY),
+        ) { Settings.Secure.putString(resolver, OWNED_KEY, it.ifEmpty { null }) }
         val engine = TriggerEngine(modes, delays, logger)
         val sources = listOf(
             WifiSource(context, handler),
@@ -126,5 +131,8 @@ class AutomationStarter(
 
         /** Who holds which system setting, from what baseline: `adb shell settings get secure mode_evolved_setting_claims`. */
         const val CLAIMS_KEY = "mode_evolved_setting_claims"
+
+        /** The Modes this module switched on and has not switched off: `adb shell settings get secure mode_evolved_owned`. */
+        const val OWNED_KEY = "mode_evolved_owned"
     }
 }

@@ -30,6 +30,27 @@ class TriggerEngineTest {
         assertEquals(emptyList<Switch>(), switches)
     }
 
+    /** A Mode this module switched on before a reboot or reload, whose trigger no longer holds. */
+    @Test
+    fun `unmet rule at load switches off a Mode this module left on`() {
+        val left = object : ModeController {
+            override fun setActive(modeId: String, active: Boolean, reset: Boolean) {
+                switches += Switch(modeId, active, reset)
+            }
+
+            override fun switchedOnHere(modeId: String) = modeId == "home"
+        }
+        val reloaded = TriggerEngine(left, delays, SilentLogger)
+
+        reloaded.onRulesChanged(listOf(home, ModeRule("work", listOf(WifiTrigger("Office")))))
+        reloaded.onStateChanged(away)
+
+        // Only the one it had switched on; then it is an ordinary decided rule.
+        assertEquals(listOf(Switch("home", false, false)), switches)
+        reloaded.onStateChanged(away.copy(bluetoothDevices = setOf("AA")))
+        assertEquals(1, switches.size)
+    }
+
     @Test
     fun `met rule at load switches on without reset`() {
         engine.onStateChanged(atHome)

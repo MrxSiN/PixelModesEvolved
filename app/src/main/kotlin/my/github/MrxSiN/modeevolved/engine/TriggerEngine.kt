@@ -164,7 +164,9 @@ class TriggerEngine(
             val first = rule.decision == NONE
             val isEdit = first && rule.modeId in edited
             if (first && !met && !isEdit) {
-                decide(rule, on)
+                // Loading never turns off a Mode someone else switched on; one this module
+                // switched on before it stopped, and whose triggers no longer hold, it does.
+                if (switchedOnHere(rule.modeId)) apply(rule, met = false, reset = false) else decide(rule, on)
                 continue
             }
             if (rule.timer != null && rule.waitMet == met) continue
@@ -209,6 +211,9 @@ class TriggerEngine(
         runCatching { modes.setActive(modeId, active, reset) }
             .onFailure { logger.warn("Switching mode $modeId failed", it) }
     }
+
+    private fun switchedOnHere(modeId: String): Boolean =
+        runCatching { modes.switchedOnHere(modeId) }.getOrDefault(false)
 
     private fun onOff(active: Boolean) = if (active) "on" else "off"
 

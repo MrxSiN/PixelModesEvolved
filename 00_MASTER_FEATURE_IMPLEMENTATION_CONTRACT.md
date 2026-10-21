@@ -38,6 +38,9 @@ Anything injected into or resident in `system_server`, Settings, framework/servi
 
 **Java / machine-generated Java / reproducible generated DEX → R8/D8 → optimized DEX → ART**
 
+Owner decision, 2026-10-21: the maintained Region A source is Kotlin, and changes to it stay in
+Kotlin; this is not a migration in either direction. The rest of this section stands.
+
 Forbidden in Region A without explicit user authorization:
 
 - Kotlin runtime implementation;
