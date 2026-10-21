@@ -92,4 +92,13 @@ class TriggerTest {
         assertFalse(AirplaneTrigger(on = false).isMetBy(DeviceState()))
     }
 
+
+    @Test
+    fun `power is met only when known and matching`() {
+        assertTrue(PowerTrigger(connected = true).isMetBy(DeviceState(powerConnected = true)))
+        assertFalse(PowerTrigger(connected = true).isMetBy(DeviceState(powerConnected = false)))
+        assertTrue(PowerTrigger(connected = false).isMetBy(DeviceState(powerConnected = false)))
+        // Unknown is neither: a source that has not answered meets no trigger.
+        assertFalse(PowerTrigger(connected = false).isMetBy(DeviceState()))
+    }
 }

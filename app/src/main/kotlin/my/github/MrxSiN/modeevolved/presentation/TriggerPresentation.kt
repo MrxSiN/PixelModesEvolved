@@ -4,11 +4,13 @@ import android.content.res.Resources
 
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.rule.AirplaneKind
+import my.github.MrxSiN.modeevolved.rule.PowerKind
 import my.github.MrxSiN.modeevolved.rule.AreaKind
 import my.github.MrxSiN.modeevolved.rule.BluetoothKind
 import my.github.MrxSiN.modeevolved.rule.MovementKind
 import my.github.MrxSiN.modeevolved.rule.WifiKind
 import my.github.MrxSiN.modeevolved.trigger.AirplaneTrigger
+import my.github.MrxSiN.modeevolved.trigger.PowerTrigger
 import my.github.MrxSiN.modeevolved.trigger.AreaTrigger
 import my.github.MrxSiN.modeevolved.trigger.BluetoothTrigger
 import my.github.MrxSiN.modeevolved.trigger.Movement
@@ -83,6 +85,20 @@ object AirplanePresentation : TriggerPresentation<AirplaneTrigger>(AirplaneKind)
     fun iconOf(on: Boolean): Int = if (on) R.drawable.ic_trigger_airplane else R.drawable.ic_trigger_airplane_off
 }
 
+object PowerPresentation : TriggerPresentation<PowerTrigger>(PowerKind) {
+    override val label = R.string.trigger_power
+    override val hint = R.string.trigger_power_hint
+    override val icon = R.drawable.ic_trigger_power
+    override fun summary(resources: Resources, item: PowerTrigger): String =
+        resources.getString(titleOf(item.connected))
+
+    fun titleOf(connected: Boolean): Int = if (connected) R.string.power_connected else R.string.power_disconnected
+
+    fun detailOf(connected: Boolean): Int = if (connected) R.string.power_connected_detail else R.string.power_disconnected_detail
+
+    fun iconOf(connected: Boolean): Int = if (connected) R.drawable.ic_trigger_power else R.drawable.ic_trigger_power_off
+}
+
 /** Every trigger presentation, in the order a person chooses between them. */
 val TriggerPresentations = PresentationSet(
     listOf(
@@ -91,6 +107,7 @@ val TriggerPresentations = PresentationSet(
         AreaPresentation,
         MovementPresentation,
         AirplanePresentation,
+        PowerPresentation,
     ),
 )
 

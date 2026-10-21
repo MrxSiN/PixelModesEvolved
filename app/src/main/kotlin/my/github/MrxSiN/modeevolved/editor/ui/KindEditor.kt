@@ -30,7 +30,7 @@ interface KindEditor<I : Any> {
 
 object TriggerEditors {
     val all: List<KindEditor<Trigger>> =
-        listOf(WifiEditor, BluetoothEditor, AreaEditor, MovementEditor, AirplaneEditor)
+        listOf(WifiEditor, BluetoothEditor, AreaEditor, MovementEditor, AirplaneEditor, PowerEditor)
 }
 
 object ActionEditors {

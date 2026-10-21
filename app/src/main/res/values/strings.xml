@@ -6,7 +6,7 @@
     <!-- Rows on the Settings Mode page. -->
     <string name="row_trigger_summary">Turns this mode on · Tap to edit</string>
     <string name="row_add_title">Add a trigger</string>
-    <string name="row_add_summary">Wi-Fi, Bluetooth, location, movement or airplane mode</string>
+    <string name="row_add_summary">Wi-Fi, Bluetooth, location, movement, airplane mode or power</string>
     <string name="row_add_more_summary">Joins the triggers above with AND</string>
     <!-- The button group between two triggers. And binds before Or. -->
     <string name="join_and">AND</string>
@@ -148,6 +148,12 @@
     <string name="airplane_on_detail">Turns this mode on as soon as airplane mode is switched on, such as when boarding a flight.</string>
     <string name="airplane_off">While airplane mode is off</string>
     <string name="airplane_off_detail">Turns this mode on whenever airplane mode is off.</string>
+    <string name="trigger_power">Power</string>
+    <string name="trigger_power_hint">When the phone is charging or unplugged</string>
+    <string name="power_connected">While connected to power</string>
+    <string name="power_connected_detail">Turns this mode on while the phone is plugged in, on a wireless charger or in a charging dock.</string>
+    <string name="power_disconnected">While not connected to power</string>
+    <string name="power_disconnected_detail">Turns this mode on whenever the phone is running on its battery.</string>
 
     <!-- Added to Android's stock Calendar events schedule page. -->
     <string name="calendar_event_filter">Event</string>

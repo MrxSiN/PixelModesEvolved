@@ -4,6 +4,7 @@ import org.json.JSONObject
 
 import my.github.MrxSiN.modeevolved.store.JsonKind
 import my.github.MrxSiN.modeevolved.trigger.AirplaneTrigger
+import my.github.MrxSiN.modeevolved.trigger.PowerTrigger
 import my.github.MrxSiN.modeevolved.trigger.AreaTrigger
 import my.github.MrxSiN.modeevolved.trigger.BluetoothTrigger
 import my.github.MrxSiN.modeevolved.trigger.GeoPoint
@@ -55,6 +56,12 @@ object MovementKind : TriggerKind<MovementTrigger>("movement", MovementTrigger::
     override fun decode(json: JSONObject) = MovementTrigger(Movement.valueOf(json.getString(STATE)))
 
     private const val STATE = "state"
+}
+
+object PowerKind : TriggerKind<PowerTrigger>("power", PowerTrigger::class.java) {
+    override fun write(item: PowerTrigger): JSONObject = JSONObject().put(CONNECTED, item.connected)
+    override fun decode(json: JSONObject) = PowerTrigger(json.getBoolean(CONNECTED))
+    private const val CONNECTED = "connected"
 }
 
 object AirplaneKind : TriggerKind<AirplaneTrigger>("airplane", AirplaneTrigger::class.java) {

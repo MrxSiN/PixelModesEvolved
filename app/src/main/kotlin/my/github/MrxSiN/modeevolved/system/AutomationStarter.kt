@@ -24,6 +24,7 @@ import my.github.MrxSiN.modeevolved.engine.TriggerEngine
 import my.github.MrxSiN.modeevolved.rule.RuleCodec
 import my.github.MrxSiN.modeevolved.store.SecureSettingsStore
 import my.github.MrxSiN.modeevolved.signal.AirplaneSource
+import my.github.MrxSiN.modeevolved.signal.PowerSource
 import my.github.MrxSiN.modeevolved.signal.AndroidMotionSensor
 import my.github.MrxSiN.modeevolved.signal.BluetoothSource
 import my.github.MrxSiN.modeevolved.signal.FlightSource
@@ -93,6 +94,7 @@ class AutomationStarter(
             MovementSource(AndroidMotionSensor(context, handler), delays, logger),
             FlightSource(context, handler, logger),
             AirplaneSource(context, handler),
+            PowerSource(context, handler),
         )
         val hub = SignalHub(sources, engine::onStateChanged, logger)
         return ModeAutomation(rules, engine, hub, handler::post)

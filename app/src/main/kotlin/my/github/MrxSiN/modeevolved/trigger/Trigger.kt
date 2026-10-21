@@ -76,6 +76,16 @@ data class MovementTrigger(val movement: Movement) : Trigger {
         if (movement == Movement.FLYING) state.flying == true else state.movement == movement
 }
 
+/**
+ * Met while the device is connected to external power, or while it is not when [connected] is
+ * false. Any source counts (cable, wireless, dock): Android reports which, but not reliably
+ * whether a phone sits in a dock, so no dock-only trigger is offered.
+ */
+data class PowerTrigger(val connected: Boolean) : Trigger {
+    override val signal: Signal get() = Signal.POWER
+    override fun isMetBy(state: DeviceState): Boolean = state.powerConnected == connected
+}
+
 /** Met while airplane mode is [on], or while it is off when [on] is false. */
 data class AirplaneTrigger(val on: Boolean) : Trigger {
     override val signal: Signal get() = Signal.AIRPLANE
