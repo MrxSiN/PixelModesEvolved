@@ -73,6 +73,10 @@ reconnecting and a position fix wandering along a boundary all produce real edge
 wait each of them switches the Mode and runs its actions. Thirty seconds covers most of it.
 Saving a trigger still applies at once — that is you, not a noisy signal.
 
+**Try these triggers** opens a read-only page: switch on the triggers you want to pretend are
+met and it says whether the Mode would turn on, and which group did it. Nothing is read from the
+phone, no Mode is switched and nothing is saved.
+
 <table>
 <tr>
 <td align="center"><img src="docs/screenshots/mode-page.png" width="250"><br><sub>Triggers and actions on a Mode's page</sub></td>
