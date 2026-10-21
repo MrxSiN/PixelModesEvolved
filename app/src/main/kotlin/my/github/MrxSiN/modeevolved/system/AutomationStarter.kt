@@ -19,6 +19,7 @@ import my.github.MrxSiN.modeevolved.core.Logger
 import my.github.MrxSiN.modeevolved.dex.HostResolver
 import my.github.MrxSiN.modeevolved.engine.ModeAutomation
 import my.github.MrxSiN.modeevolved.engine.SignalHub
+import my.github.MrxSiN.modeevolved.engine.DecisionCodec
 import my.github.MrxSiN.modeevolved.engine.TriggerEngine
 import my.github.MrxSiN.modeevolved.rule.RuleCodec
 import my.github.MrxSiN.modeevolved.store.SecureSettingsStore
@@ -79,7 +80,12 @@ class AutomationStarter(
             logger,
             Settings.Secure.getString(resolver, OWNED_KEY),
         ) { Settings.Secure.putString(resolver, OWNED_KEY, it.ifEmpty { null }) }
-        val engine = TriggerEngine(modes, delays, logger)
+        // Event-driven and bounded: one entry per Mode, written only when the engine decides.
+        val decisions = LinkedHashMap(DecisionCodec.decode(Settings.Secure.getString(resolver, DecisionCodec.KEY)))
+        val engine = TriggerEngine(modes, delays, logger, explain = { modeId, decision ->
+            decisions[modeId] = decision
+            Settings.Secure.putString(resolver, DecisionCodec.KEY, DecisionCodec.encode(decisions))
+        })
         val sources = listOf(
             WifiSource(context, handler),
             BluetoothSource(context, handler, logger, bluetoothConnected()),

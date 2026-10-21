@@ -3,11 +3,13 @@ package my.github.MrxSiN.modeevolved.page
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.diagnostics.DiagnosticsIntents
 import my.github.MrxSiN.modeevolved.diagnostics.DiagnosticsReport
 import my.github.MrxSiN.modeevolved.diagnostics.DiagnosticsReportCodec
+import my.github.MrxSiN.modeevolved.engine.DecisionCodec
 import my.github.MrxSiN.modeevolved.store.SecureDiagnosticsStore
 
 /** What the Modes list row says, and whether it says it with a tick or a warning. */
@@ -72,6 +74,9 @@ class DiagnosticsLauncher(
             apiVersion = apiVersion,
             features = found.features,
             contracts = found.contracts,
+            decisions = DecisionCodec.decode(
+                runCatching { Settings.Secure.getString(context.contentResolver, DecisionCodec.KEY) }.getOrNull(),
+            ),
         )
     }
 

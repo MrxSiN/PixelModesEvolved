@@ -38,6 +38,9 @@ class TriggerEngine(
     private val modes: ModeController,
     private val delays: Delays,
     private val logger: Logger,
+    /** Told each decision, with its cause; see [Decision]. Runs on the engine thread. */
+    private val explain: (String, Decision) -> Unit = { _, _ -> },
+    private val now: () -> Long = System::currentTimeMillis,
 ) {
 
     private var rules: Array<Compiled> = emptyArray()
@@ -109,7 +112,10 @@ class TriggerEngine(
         // A rule that went away while it held its Mode on lets the Mode go, in the order the decisions were made.
         rules.filter { it.decision == ON && it.modeId !in byId }
             .sortedBy { it.decidedAt }
-            .forEach { switch(it.modeId, active = false, reset = false) }
+            .forEach {
+                switch(it.modeId, active = false, reset = false)
+                tell(it.modeId, false, Decision.Cause.REMOVED, 0)
+            }
 
         val compiled = byId.values.map { rule ->
             val old = previous[rule.modeId]
@@ -166,16 +172,25 @@ class TriggerEngine(
             if (first && !met && !isEdit) {
                 // Loading never turns off a Mode someone else switched on; one this module
                 // switched on before it stopped, and whose triggers no longer hold, it does.
-                if (switchedOnHere(rule.modeId)) apply(rule, met = false, reset = false) else decide(rule, on)
+                if (switchedOnHere(rule.modeId)) {
+                    apply(rule, met = false, reset = false)
+                    tell(rule.modeId, false, Decision.Cause.LOADED, rule.signals)
+                } else {
+                    decide(rule, on)
+                }
                 continue
             }
             if (rule.timer != null && rule.waitMet == met) continue
 
             cancelWait(rule)
+            val cause = if (isEdit) Decision.Cause.SAVED else Decision.Cause.SIGNALS
+            val touched = if (signals == ALL) rule.signals else rule.signals and signals
             if (isEdit || first || rule.rule.stabilityMillis <= 0L) {
                 apply(rule, met, reset = isEdit)
+                tell(rule.modeId, met, cause, touched)
             } else {
                 await(rule, met)
+                tell(rule.modeId, met, Decision.Cause.WAITING, touched)
             }
         }
     }
@@ -187,6 +202,7 @@ class TriggerEngine(
         rule.timer = delays.after(millis) {
             rule.timer = null
             apply(rule, met, reset = false)
+            tell(rule.modeId, met, Decision.Cause.SIGNALS, rule.signals)
         }
     }
 
@@ -210,6 +226,12 @@ class TriggerEngine(
         logger.info("Mode $modeId -> ${onOff(active)}${if (reset) " (saved)" else ""}")
         runCatching { modes.setActive(modeId, active, reset) }
             .onFailure { logger.warn("Switching mode $modeId failed", it) }
+    }
+
+    private fun tell(modeId: String, active: Boolean, cause: Decision.Cause, signals: Int) {
+        val kinds = Signal.entries.filterTo(LinkedHashSet()) { signals and bit(it) != 0 }
+        runCatching { explain(modeId, Decision(active, cause, kinds, now())) }
+            .onFailure { logger.warn("Could not record why mode $modeId changed", it) }
     }
 
     private fun switchedOnHere(modeId: String): Boolean =

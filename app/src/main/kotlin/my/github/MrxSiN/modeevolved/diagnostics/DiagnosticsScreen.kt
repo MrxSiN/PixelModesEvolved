@@ -1,5 +1,6 @@
 package my.github.MrxSiN.modeevolved.diagnostics
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.core.Contract
 import my.github.MrxSiN.modeevolved.core.FeatureHealth
 import my.github.MrxSiN.modeevolved.core.Resolution
+import my.github.MrxSiN.modeevolved.engine.Decision
 import my.github.MrxSiN.modeevolved.editor.ui.EditorScaffold
 import my.github.MrxSiN.modeevolved.editor.ui.RowPosition
 import my.github.MrxSiN.modeevolved.editor.ui.Section
@@ -97,6 +99,16 @@ fun DiagnosticsScreen(report: DiagnosticsReport, onBack: () -> Unit, onCopy: () 
             }
         }
 
+        Section(stringResource(R.string.diagnostics_decisions)) {
+            if (report.decisions.isEmpty()) {
+                ValueRow(stringResource(R.string.diagnostics_decisions_none), "", positionOf(0, 1))
+            }
+            val entries = report.decisions.entries.sortedByDescending { it.value.atMillis }
+            entries.forEachIndexed { index, (modeId, decision) ->
+                DecisionRow(modeId, decision, positionOf(index, entries.size))
+            }
+        }
+
         Section(stringResource(R.string.diagnostics_report)) {
             SectionRow(
                 title = stringResource(R.string.diagnostics_copy),
@@ -145,6 +157,39 @@ private fun SectionScope.FeatureRow(health: FeatureHealth, position: RowPosition
         )
     }
 }
+
+/** Why one Mode last changed, or is about to: on or off, the cause, and the kinds of signal read. */
+@Composable
+private fun SectionScope.DecisionRow(modeId: String, decision: Decision, position: RowPosition) {
+    InfoRow(position) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(if (decision.active) R.string.diagnostics_decision_on else R.string.diagnostics_decision_off, shortId(modeId)),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                decisionText(decision) + " \u00b7 " + DateUtils.getRelativeTimeSpanString(decision.atMillis),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun decisionText(decision: Decision): String {
+    val signals = decision.signals.joinToString(", ") { it.name.lowercase().replaceFirstChar(Char::uppercase) }
+    return when (decision.cause) {
+        Decision.Cause.SIGNALS -> stringResource(R.string.diagnostics_cause_signals, signals)
+        Decision.Cause.WAITING -> stringResource(R.string.diagnostics_cause_waiting, signals)
+        Decision.Cause.SAVED -> stringResource(R.string.diagnostics_cause_saved)
+        Decision.Cause.LOADED -> stringResource(R.string.diagnostics_cause_loaded)
+        Decision.Cause.REMOVED -> stringResource(R.string.diagnostics_cause_removed)
+    }
+}
+
+/** A Mode id is a long random string; its start is enough to tell Modes apart, and names nothing. */
+fun shortId(modeId: String): String = modeId.take(8)
 
 /** One member this module depends on, and what became of it. A missing optional one costs no feature. */
 @Composable

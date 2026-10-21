@@ -6,6 +6,8 @@ import my.github.MrxSiN.modeevolved.compat.FeatureContracts
 import my.github.MrxSiN.modeevolved.core.Contract
 import my.github.MrxSiN.modeevolved.core.FeatureHealth
 import my.github.MrxSiN.modeevolved.core.Resolution
+import my.github.MrxSiN.modeevolved.engine.Decision
+import my.github.MrxSiN.modeevolved.engine.DecisionCodec
 import my.github.MrxSiN.modeevolved.store.Diagnostics
 import my.github.MrxSiN.modeevolved.store.DiagnosticsCodec
 
@@ -31,6 +33,8 @@ data class DiagnosticsReport(
     val apiVersion: Int = 0,
     val features: List<FeatureHealth> = emptyList(),
     val contracts: List<Contract> = emptyList(),
+    /** Why the engine last decided about each Mode it automates, by Mode id ([Decision]). */
+    val decisions: Map<String, Decision> = emptyMap(),
 ) {
 
     val resolved: Int get() = contracts.count { it.resolution != Resolution.MISSING }
@@ -76,6 +80,7 @@ object DiagnosticsReportCodec {
         .put(FRAMEWORK_VERSION, report.frameworkVersion)
         .put(API, report.apiVersion)
         .put(FOUND, JSONObject(DiagnosticsCodec.encode(Diagnostics(report.features, report.contracts))))
+        .put(DECISIONS, DecisionCodec.encode(report.decisions))
         .toString()
 
     /** The report in [text], or null when it cannot be read. */
@@ -94,6 +99,7 @@ object DiagnosticsReportCodec {
             apiVersion = json.optInt(API),
             features = found.features,
             contracts = found.contracts,
+            decisions = DecisionCodec.decode(json.optString(DECISIONS)),
         )
     }.getOrNull()
 
@@ -107,6 +113,7 @@ object DiagnosticsReportCodec {
     private const val FRAMEWORK_VERSION = "frameworkVersion"
     private const val API = "api"
     private const val FOUND = "found"
+    private const val DECISIONS = "decisions"
 }
 
 /** Names both processes use to reach the compatibility page. */

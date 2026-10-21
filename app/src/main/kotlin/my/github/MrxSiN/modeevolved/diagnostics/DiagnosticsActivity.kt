@@ -57,6 +57,15 @@ class DiagnosticsActivity : ComponentActivity() {
             appendLine()
         }
         appendLine()
+        // Causes and signal kinds only: no names, networks, devices or places (ROADMAP I16).
+        appendLine("Mode decisions")
+        for ((modeId, decision) in report.decisions.entries.sortedByDescending { it.value.atMillis }) {
+            append("  ").append(shortId(modeId)).append(if (decision.active) " on  " else " off ")
+            append(decision.cause.name.lowercase())
+            if (decision.signals.isNotEmpty()) append(" (").append(decision.signals.joinToString(",") { it.name.lowercase() }).append(')')
+            appendLine()
+        }
+        appendLine()
         appendLine(
             "Hooks: ${report.resolved}/${report.contracts.size} resolved, ${report.bySignature} by signature, " +
                 "${report.fallbacks} by fallback, ${report.failed} failed",

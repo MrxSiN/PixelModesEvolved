@@ -68,6 +68,15 @@
     <string name="diagnostics_optional">Optional</string>
     <string name="diagnostics_fallbacks">Fallback signatures</string>
 
+    <string name="diagnostics_decisions">Recent Mode decisions</string>
+    <string name="diagnostics_decisions_none">No trigger has switched a Mode yet. A Mode turned on by hand, by a schedule or by another app is not shown: the reason is not visible to this module.</string>
+    <string name="diagnostics_decision_on">Mode %1$s turned on</string>
+    <string name="diagnostics_decision_off">Mode %1$s turned off</string>
+    <string name="diagnostics_cause_signals">Its triggers changed: %1$s</string>
+    <string name="diagnostics_cause_waiting">Waiting for its triggers to hold: %1$s</string>
+    <string name="diagnostics_cause_saved">Its triggers were saved</string>
+    <string name="diagnostics_cause_loaded">Its triggers no longer held at start</string>
+    <string name="diagnostics_cause_removed">Its triggers were removed</string>
     <string name="diagnostics_report">Report</string>
     <string name="diagnostics_copy">Copy compatibility report</string>
     <string name="diagnostics_copy_hint">For a bug report after an Android update</string>
