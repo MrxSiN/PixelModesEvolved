@@ -9,3 +9,7 @@ local.properties
 *.base64
 .kotlin/
 tmp/
+
+# Shared prompt kit, kept outside version control
+MASTER_PROMPT.md
+ROADMAP.md
