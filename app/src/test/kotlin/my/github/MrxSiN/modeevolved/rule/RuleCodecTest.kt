@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 import my.github.MrxSiN.modeevolved.trigger.AirplaneTrigger
+import my.github.MrxSiN.modeevolved.trigger.HeadphonesTrigger
 import my.github.MrxSiN.modeevolved.trigger.PowerTrigger
 import my.github.MrxSiN.modeevolved.trigger.AreaTrigger
 import my.github.MrxSiN.modeevolved.trigger.BluetoothTrigger
@@ -29,8 +30,9 @@ class RuleCodecTest {
                     MovementTrigger(Movement.MOVING),
                     AirplaneTrigger(on = true),
                     PowerTrigger(connected = true),
+                    HeadphonesTrigger(connected = false),
                 ),
-                joins = listOf(ModeRule.Join.AND, ModeRule.Join.OR, ModeRule.Join.AND, ModeRule.Join.OR, ModeRule.Join.AND),
+                joins = listOf(ModeRule.Join.AND, ModeRule.Join.OR, ModeRule.Join.AND, ModeRule.Join.OR, ModeRule.Join.AND, ModeRule.Join.OR),
             ),
             ModeRule("home", triggers = listOf(WifiTrigger("Home"))),
         )

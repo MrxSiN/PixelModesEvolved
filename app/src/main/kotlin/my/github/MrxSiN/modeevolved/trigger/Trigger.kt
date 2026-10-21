@@ -86,6 +86,18 @@ data class PowerTrigger(val connected: Boolean) : Trigger {
     override fun isMetBy(state: DeviceState): Boolean = state.powerConnected == connected
 }
 
+/**
+ * Met while wired or USB headphones are connected, or while none are when [connected] is false.
+ *
+ * Connection only: Android tells apart a connected accessory, the route audio would take and
+ * audio actually playing, and only the first is followed here. Bluetooth audio has its own
+ * trigger ([BluetoothTrigger]), by device.
+ */
+data class HeadphonesTrigger(val connected: Boolean) : Trigger {
+    override val signal: Signal get() = Signal.HEADPHONES
+    override fun isMetBy(state: DeviceState): Boolean = state.headphonesConnected == connected
+}
+
 /** Met while airplane mode is [on], or while it is off when [on] is false. */
 data class AirplaneTrigger(val on: Boolean) : Trigger {
     override val signal: Signal get() = Signal.AIRPLANE

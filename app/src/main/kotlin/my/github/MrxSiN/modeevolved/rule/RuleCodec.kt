@@ -56,7 +56,7 @@ class RuleCodec(val triggers: KindCodec<Trigger>) : ModeMapCodec<ModeRule>() {
         private const val LEGACY_MATCH = "match"
 
         fun standard(): RuleCodec = RuleCodec(
-            KindCodec(listOf(WifiKind, BluetoothKind, AreaKind, MovementKind, AirplaneKind, PowerKind)),
+            KindCodec(listOf(WifiKind, BluetoothKind, AreaKind, MovementKind, AirplaneKind, PowerKind, HeadphonesKind)),
         )
     }
 }

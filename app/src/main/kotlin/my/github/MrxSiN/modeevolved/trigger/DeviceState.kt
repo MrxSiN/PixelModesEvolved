@@ -16,6 +16,7 @@ package my.github.MrxSiN.modeevolved.trigger
  * @property flying whether the device is on board a flying aircraft.
  * @property airplaneMode whether airplane mode is on.
  * @property powerConnected whether the device is connected to external power (cable, wireless or dock).
+ * @property headphonesConnected whether wired or USB headphones are connected (not whether anything plays).
  */
 data class DeviceState(
     val wifiNetworks: Set<String> = emptySet(),
@@ -25,13 +26,14 @@ data class DeviceState(
     val flying: Boolean? = null,
     val airplaneMode: Boolean? = null,
     val powerConnected: Boolean? = null,
+    val headphonesConnected: Boolean? = null,
 )
 
 /** A change to one slice of [DeviceState], applied by the source that owns it. */
 typealias StateUpdate = (DeviceState) -> DeviceState
 
 /** The independent inputs a trigger can read. Each one is served by one signal source. */
-enum class Signal { WIFI, BLUETOOTH, LOCATION, MOVEMENT, FLIGHT, AIRPLANE, POWER }
+enum class Signal { WIFI, BLUETOOTH, LOCATION, MOVEMENT, FLIGHT, AIRPLANE, POWER, HEADPHONES }
 
 /** How the device moves. [FLYING] is judged from position fixes, the others from the motion sensor. */
 enum class Movement { MOVING, STILL, FLYING }

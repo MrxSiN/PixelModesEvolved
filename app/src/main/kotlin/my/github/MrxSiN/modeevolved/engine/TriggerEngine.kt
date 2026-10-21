@@ -261,6 +261,7 @@ class TriggerEngine(
             if (among and bit(Signal.FLIGHT) != 0 && old.flying != new.flying) mask = mask or bit(Signal.FLIGHT)
             if (among and bit(Signal.AIRPLANE) != 0 && old.airplaneMode != new.airplaneMode) mask = mask or bit(Signal.AIRPLANE)
             if (among and bit(Signal.POWER) != 0 && old.powerConnected != new.powerConnected) mask = mask or bit(Signal.POWER)
+            if (among and bit(Signal.HEADPHONES) != 0 && old.headphonesConnected != new.headphonesConnected) mask = mask or bit(Signal.HEADPHONES)
             return mask
         }
     }

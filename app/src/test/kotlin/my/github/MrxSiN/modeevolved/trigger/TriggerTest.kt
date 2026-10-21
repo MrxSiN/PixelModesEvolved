@@ -94,6 +94,13 @@ class TriggerTest {
 
 
     @Test
+    fun `headphones are met only when known and matching`() {
+        assertTrue(HeadphonesTrigger(connected = true).isMetBy(DeviceState(headphonesConnected = true)))
+        assertFalse(HeadphonesTrigger(connected = false).isMetBy(DeviceState(headphonesConnected = true)))
+        assertFalse(HeadphonesTrigger(connected = false).isMetBy(DeviceState()))
+    }
+
+    @Test
     fun `power is met only when known and matching`() {
         assertTrue(PowerTrigger(connected = true).isMetBy(DeviceState(powerConnected = true)))
         assertFalse(PowerTrigger(connected = true).isMetBy(DeviceState(powerConnected = false)))
