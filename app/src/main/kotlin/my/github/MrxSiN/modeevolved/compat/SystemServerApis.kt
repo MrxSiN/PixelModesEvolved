@@ -42,15 +42,24 @@ object SystemServerApis {
 
     // Acting for the person using the phone.
 
-    val USER_HANDLE_TYPE = type(USER_HANDLE.name)
-
-    /** Hidden: the user in the foreground. */
-    val USER_HANDLE_CURRENT = FieldApi(USER_HANDLE_TYPE, "CURRENT")
-
     val CONTEXT_TYPE = type(Sdk.CONTEXT.name)
 
     /** Hidden: system_server may start activities for any user. */
     val START_ACTIVITY_AS_USER = MethodApi(CONTEXT_TYPE, "startActivityAsUser", listOf(INTENT, USER_HANDLE))
+
+    val ACTIVITY_THREAD = type("android.app.ActivityThread")
+
+    /** Hidden, static: the package manager service. */
+    val ACTIVITY_THREAD_GET_PACKAGE_MANAGER = MethodApi(ACTIVITY_THREAD, "getPackageManager")
+
+    val PACKAGE_MANAGER_SERVICE = type("android.content.pm.IPackageManager")
+
+    /**
+     * Whether the platform or a system app declared an action a protected broadcast.
+     * Not `ActivityThread.isProtectedBroadcast(Intent)`: that answers false unless
+     * StrictMode's unsafe intent check is on, measured on `CP3A.261005.005`.
+     */
+    val PACKAGE_MANAGER_IS_PROTECTED_BROADCAST = MethodApi(PACKAGE_MANAGER_SERVICE, "isProtectedBroadcast", listOf(STRING))
 
     // What is already there when a trigger starts.
 

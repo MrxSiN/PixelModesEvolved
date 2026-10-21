@@ -127,8 +127,11 @@ Until a permission is verified across every recorded build, the caller check abo
 
 **Boundary 2: stored rules and actions.** Anything with `WRITE_SECURE_SETTINGS` (adb, some system
 apps) can write them, bypassing the editor. So validation that matters is repeated where the
-privilege is used: a broadcast name must pass `IntentActions` (no platform-owned names), and the
-only send path takes a `SendableAction`, which only that check can make. Launching an app uses its
+privilege is used: a broadcast name must pass `IntentActions` (no platform-owned names), the
+only send path takes a `SendableAction`, which only that check can make, and that path
+refuses any action the package manager reports as a protected broadcast, since vendors and
+system apps declare protected names outside the reserved prefixes. Actions run for user 0,
+whose settings and Modes system_server reads, never for whichever user is in the foreground. Launching an app uses its
 own launcher intent; Tasker gets a fixed action. Undecodable entries are dropped.
 
 **Boundary 3: hooks inside Settings and system_server.** Every hook is protective, gated on its

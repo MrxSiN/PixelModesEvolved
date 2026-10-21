@@ -154,7 +154,10 @@ object FeatureContracts {
         ),
         FeatureContract(
             Feature.ACTION_AUTOMATION,
-            required = listOf(SS.USER_HANDLE_TYPE, SS.USER_HANDLE_CURRENT, SS.CONTEXT_TYPE, SS.START_ACTIVITY_AS_USER),
+            required = listOf(
+                SS.CONTEXT_TYPE, SS.START_ACTIVITY_AS_USER,
+                SS.ACTIVITY_THREAD, SS.ACTIVITY_THREAD_GET_PACKAGE_MANAGER, SS.PACKAGE_MANAGER_SERVICE, SS.PACKAGE_MANAGER_IS_PROTECTED_BROADCAST,
+            ),
         ),
     ) + SystemSetting.entries.map { FeatureContract(it.feature, required = settingMembers[it.feature].orEmpty()) }
 

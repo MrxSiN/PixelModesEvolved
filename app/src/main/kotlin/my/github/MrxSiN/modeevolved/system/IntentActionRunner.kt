@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.os.Process
 import android.os.UserHandle
 
 import my.github.MrxSiN.modeevolved.action.ActionRunner
@@ -24,7 +25,7 @@ import my.github.MrxSiN.modeevolved.dex.HostResolver
  * Each kind of action has one [Performer]; a new kind adds one here.
  * Broadcasts carry which Mode changed and how, for automation apps to read.
  */
-// system_server holds every permission and may act for the current user.
+// system_server holds every permission and may act for any user; it acts for user 0.
 @SuppressLint("MissingPermission", "WrongConstant")
 class IntentActionRunner(
     private val context: Context,
@@ -33,8 +34,15 @@ class IntentActionRunner(
     private val logger: Logger,
 ) : ActionRunner {
 
-    private val currentUser = apis.field(SS.USER_HANDLE_CURRENT).get(null) as UserHandle
+    /**
+     * The user whose rules these are: system_server, which is user 0, reads its own settings and Modes,
+     * so actions go to user 0 too, never to whoever is in the foreground. Only user 0
+     * is supported; another user's session never sees a Mode change or name of user 0.
+     */
+    private val owner: UserHandle = Process.myUserHandle()
     private val startActivityAsUser = apis.method(SS.START_ACTIVITY_AS_USER)
+    private val packageManagerService = apis.method(SS.ACTIVITY_THREAD_GET_PACKAGE_MANAGER).invoke(null)
+    private val isProtectedBroadcast = apis.method(SS.PACKAGE_MANAGER_IS_PROTECTED_BROADCAST)
 
     private val performers = listOf(LaunchApp(), Broadcast(), TaskerTask())
 
@@ -61,7 +69,7 @@ class IntentActionRunner(
             val intent = context.packageManager.getLaunchIntentForPackage(action.packageName)
                 ?: return logger.warn("${action.packageName} cannot be opened")
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivityAsUser.invoke(context, intent, currentUser)
+            startActivityAsUser.invoke(context, intent, owner)
         }
     }
 
@@ -102,12 +110,21 @@ class IntentActionRunner(
         }
     }
 
-    /** The one way a broadcast leaves this runner: under a name [IntentActions] cleared. */
+    /**
+     * The one way a broadcast leaves this runner: under a name [IntentActions] cleared,
+     * and that nothing on this phone declared protected. The prefixes miss protected
+     * names that vendors and system apps declare outside them (`PNW.*`,
+     * `vendor.intent.action.*`, `ScheduleConditionProvider.EVALUATE` on `CP3A.261005.005`),
+     * which only the system may send and which this process would send as the system.
+     */
     private fun send(action: SendableAction, extras: Intent.() -> Unit) {
         val intent = Intent(action.name).apply(extras)
+        if (isProtectedBroadcast.invoke(packageManagerService, action.name) != false) {
+            return logger.warn("Refused to broadcast $action: the system declares it protected")
+        }
         // Lets manifest receivers of apps that are not running receive the broadcast.
         intent.addFlags(FLAG_RECEIVER_INCLUDE_BACKGROUND)
-        context.sendBroadcastAsUser(intent, currentUser)
+        context.sendBroadcastAsUser(intent, owner)
     }
 
     private fun isInstalled(packageName: String): Boolean =
