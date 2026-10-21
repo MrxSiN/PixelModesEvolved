@@ -77,6 +77,14 @@ class TriggerSection(
         // A Mode with no trigger has nothing to stabilize and nothing to conflict with its schedule.
         if (rule.triggers.isEmpty()) return@buildList
         add(stabilityRow(category, context, mode, rule))
+        add(
+            PreferenceRow.Link(
+                key = "${KEY_PREFIX}simulate",
+                title = text.string(R.string.simulate_row_title),
+                summary = text.string(R.string.simulate_row_summary),
+                icon = text.icon(context, R.drawable.ic_check),
+            ) { editor.simulate(context, mode, rule) },
+        )
         if (mode.hasSchedule) add(scheduleWarningRow(context))
     }
 

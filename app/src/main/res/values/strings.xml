@@ -15,6 +15,20 @@
 
     <!-- How long the triggers must keep saying the same thing before the mode is switched. -->
     <string name="stability_title">Wait before switching</string>
+    <string name="simulate_row_title">Try these triggers</string>
+    <string name="simulate_row_summary">See when this Mode would turn on. Nothing is switched.</string>
+    <string name="simulate_title">Try these triggers</string>
+    <string name="simulate_intro">Turn on the triggers you want to pretend are met. This only shows what the Mode would do: nothing is read from the phone, no Mode is switched and nothing is saved.</string>
+    <string name="simulate_group">Or group %1$d</string>
+    <string name="simulate_met">Pretend this is met</string>
+    <string name="simulate_not_met">Pretend this is not met</string>
+    <string name="simulate_result">The Mode would</string>
+    <string name="simulate_on">Turn on</string>
+    <string name="simulate_off">Turn off, or stay off</string>
+    <string name="simulate_on_all">Every trigger is met.</string>
+    <string name="simulate_on_because">Group %1$d has every trigger met.</string>
+    <string name="simulate_off_because">No group has all its triggers met. A Mode someone turned on by hand stays on until its triggers change.</string>
+    <string name="simulate_wait">Only once the answer has held for %1$s.</string>
     <string name="stability_none">Switch straight away</string>
     <string name="stability_summary">%1$s · Tap to change</string>
     <plurals name="duration_seconds">

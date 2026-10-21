@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 
+import org.json.JSONObject
+
 import my.github.MrxSiN.modeevolved.R
 import my.github.MrxSiN.modeevolved.calendar.CalendarEventCodec
 import my.github.MrxSiN.modeevolved.calendar.CalendarEventEditorResult
@@ -15,7 +17,9 @@ import my.github.MrxSiN.modeevolved.editor.ui.EditorApp
 import my.github.MrxSiN.modeevolved.editor.ui.EditorTexts
 import my.github.MrxSiN.modeevolved.editor.ui.EditorTheme
 import my.github.MrxSiN.modeevolved.editor.ui.KindEditor
+import my.github.MrxSiN.modeevolved.editor.ui.SimulationScreen
 import my.github.MrxSiN.modeevolved.editor.ui.TriggerEditors
+import my.github.MrxSiN.modeevolved.rule.RuleCodec
 import my.github.MrxSiN.modeevolved.security.SettingsCaller
 
 /**
@@ -39,6 +43,21 @@ class EditorActivity : ComponentActivity() {
             EditorSubject.TRIGGER -> show(ItemFamilies.triggers, TriggerEditors.all, TRIGGER_TEXTS)
             EditorSubject.ACTION -> show(ItemFamilies.actions, ActionEditors.all, ACTION_TEXTS)
             EditorSubject.CALENDAR_EVENT -> showCalendarEvent()
+            EditorSubject.SIMULATE -> showSimulation()
+        }
+    }
+
+    /** Nothing comes back from here: the page only shows what the rule would decide. */
+    private fun showSimulation() {
+        val input = intent.getStringExtra(EditorIntents.EXTRA_INPUT)
+            ?.let { runCatching { JSONObject(it) }.getOrNull() }
+            ?: return finish()
+        val rule = RuleCodec.standard().decode(input.optString(SIMULATE_RULE)).firstOrNull() ?: return finish()
+        val name = input.optString(SIMULATE_MODE_NAME)
+        setContent {
+            EditorTheme {
+                SimulationScreen(modeName = name, rule = rule, onBack = ::finish)
+            }
         }
     }
 
@@ -82,8 +101,12 @@ class EditorActivity : ComponentActivity() {
         }
     }
 
-    private companion object {
-        val TRIGGER_TEXTS = EditorTexts(R.string.editor_add_title, R.string.editor_add_intro, R.string.remove_title, R.string.remove_text)
-        val ACTION_TEXTS = EditorTexts(R.string.actions_add_title, R.string.actions_add_intro, R.string.actions_remove_title, R.string.actions_remove_text)
+    companion object {
+        /** The input of [EditorSubject.SIMULATE]: the rule as [RuleCodec] stores it, and the Mode's name. */
+        const val SIMULATE_RULE = "rule"
+        const val SIMULATE_MODE_NAME = "modeName"
+
+        private val TRIGGER_TEXTS = EditorTexts(R.string.editor_add_title, R.string.editor_add_intro, R.string.remove_title, R.string.remove_text)
+        private val ACTION_TEXTS = EditorTexts(R.string.actions_add_title, R.string.actions_add_intro, R.string.actions_remove_title, R.string.actions_remove_text)
     }
 }

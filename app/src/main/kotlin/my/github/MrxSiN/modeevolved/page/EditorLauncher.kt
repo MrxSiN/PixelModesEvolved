@@ -3,9 +3,15 @@ package my.github.MrxSiN.modeevolved.page
 import android.content.Context
 import android.content.Intent
 
+import org.json.JSONObject
+
+import my.github.MrxSiN.modeevolved.editor.EditorActivity
 import my.github.MrxSiN.modeevolved.editor.EditorInput
+import my.github.MrxSiN.modeevolved.editor.EditorSubject
 import my.github.MrxSiN.modeevolved.editor.EditorIntents
 import my.github.MrxSiN.modeevolved.editor.ItemFamily
+import my.github.MrxSiN.modeevolved.rule.RuleCodec
+import my.github.MrxSiN.modeevolved.trigger.ModeRule
 
 /**
  * Opens the editor from a Mode page.
@@ -28,6 +34,20 @@ class EditorLauncher(private val opener: EditorOpener) {
                 .setClassName(EditorIntents.PACKAGE, EditorIntents.ACTIVITY)
                 .putExtra(EditorIntents.EXTRA_SUBJECT, family.subject.name)
                 .putExtra(EditorIntents.EXTRA_INPUT, family.codec.encodeInput(input))
+        }
+    }
+
+    /** Opens the read-only trigger trial for [rule]; nothing comes back, so no result is asked for. */
+    fun simulate(context: Context, mode: ModeRef, rule: ModeRule) {
+        val input = JSONObject()
+            .put(EditorActivity.SIMULATE_RULE, RuleCodec.standard().encode(listOf(rule)))
+            .put(EditorActivity.SIMULATE_MODE_NAME, mode.name)
+            .toString()
+        opener.open(context, requestCode = null) {
+            Intent()
+                .setClassName(EditorIntents.PACKAGE, EditorIntents.ACTIVITY)
+                .putExtra(EditorIntents.EXTRA_SUBJECT, EditorSubject.SIMULATE.name)
+                .putExtra(EditorIntents.EXTRA_INPUT, input)
         }
     }
 }

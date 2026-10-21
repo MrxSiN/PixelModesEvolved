@@ -14,6 +14,9 @@ enum class EditorSubject(val requestCode: Int) {
     TRIGGER(0x4D45),
     ACTION(0x4D46),
     CALENDAR_EVENT(0x4D47),
+
+    /** Read-only: tries a Mode's triggers with made-up answers. Opened without asking for a result. */
+    SIMULATE(0x4D48),
     ;
 
     companion object {

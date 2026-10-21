@@ -34,7 +34,7 @@ class DeviceFacts(private val context: Context) {
             lastLocation = lastLocation(),
         )
         EditorSubject.ACTION -> EditorFacts(taskerTasks = taskerTasks(), unavailableSettings = unavailableSettings())
-        EditorSubject.CALENDAR_EVENT -> EditorFacts()
+        EditorSubject.CALENDAR_EVENT, EditorSubject.SIMULATE -> EditorFacts()
     }
 
     @Suppress("DEPRECATION")
