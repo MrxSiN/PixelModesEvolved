@@ -12,7 +12,7 @@ package my.github.MrxSiN.modeevolved.compat
 object VerifiedBuilds {
 
     val builds: Set<String> = setOf(
-        "CP3A.261005.005",
+        "CP4A.261105.040.A1",
     )
 
     fun isVerified(build: String): Boolean = build in builds

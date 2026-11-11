@@ -50,7 +50,10 @@ class DexClassFinder(
         is Locator.DexSearch -> search.use(classLoader) { bridge ->
             bridge.findClass {
                 searchPackages(locator.inPackage)
-                matcher { locator.declaring.forEach { method -> addMethod { name(method) } } }
+                matcher {
+                    locator.declaring.forEach { method -> addMethod { name(method) } }
+                    locator.fields.forEach { field -> addField { name(field) } }
+                }
             }.map { it.name }
         }
         is Locator.Ancestor -> {

@@ -17,7 +17,7 @@ import my.github.MrxSiN.modeevolved.compat.Sdk.URI
 
 /**
  * Every private member of the Settings process this module reaches for, as read off
- * `CP3A.260905.009`.
+ * `CP3A.260905.009`, and checked against `CP4A.261105.040.A1`.
  *
  * This is the only place their names are written. Hook code names these values and
  * the resolver (`HostResolver`) looks them up, so a signature changes here once and
@@ -97,16 +97,20 @@ object SettingsApis {
     val MODES_FRAGMENT_BASE_GET_SCREEN = MethodApi(MODES_FRAGMENT_BASE, "getPreferenceScreen")
 
     /** The stock schedule pages that get a Remove schedule button. */
+    // ponytail: by name only; both share one method shape with ten sibling pages, so a dex search would be ambiguous.
     val SCHEDULE_TIME_FRAGMENT = type("$MODES.ZenModeSetScheduleFragment")
     val SCHEDULE_CALENDAR_FRAGMENT = type("$MODES.ZenModeSetCalendarFragment")
 
-    val CALENDAR_CONTROLLER = type("$MODES.ZenModeSetCalendarPreferenceController")
+    val CALENDAR_CONTROLLER = type(
+        "$MODES.ZenModeSetCalendarPreferenceController",
+        Locator.DexSearch(MODES, listOf("updateEventMode", "reloadCalendar", "updateState")),
+    )
 
     /** The icons offered when a Mode's icon is changed: framework drawables, read from a Settings array. */
-    val ICON_OPTIONS = type("$MODES.IconOptionsProviderImpl")
+    val ICON_OPTIONS = type("$MODES.IconOptionsProviderImpl", Locator.DexSearch(MODES, listOf("getIcons"), fields = listOf("mContext")))
     val ICON_OPTIONS_CONTEXT = FieldApi(ICON_OPTIONS, "mContext")
     val ICON_OPTIONS_GET_ICONS = MethodApi(ICON_OPTIONS, "getIcons", scope = Scope.HOOK)
-    val ICON_INFO = type("$MODES.IconOptionsProvider\$IconInfo")
+    val ICON_INFO = type("$MODES.IconOptionsProvider\$IconInfo", Locator.DexSearch(MODES, listOf("resId", "description")))
     val ICON_INFO_NEW = ConstructorApi(ICON_INFO, listOf(INT, STRING))
     val ICON_INFO_RES_ID = MethodApi(ICON_INFO, "resId")
     val IMMUTABLE_LIST = type("com.google.common.collect.ImmutableList")
@@ -150,7 +154,10 @@ object SettingsApis {
     val APPLICATION = type("android.app.Application")
     val APPLICATION_ON_CREATE = MethodApi(APPLICATION, "onCreate", scope = Scope.HOOK)
 
-    val SETTINGS_ACTIVITY = type("com.android.settings.SettingsActivity")
+    val SETTINGS_ACTIVITY = type(
+        "com.android.settings.SettingsActivity",
+        Locator.DexSearch("com.android.settings", listOf("launchSettingFragment", "getInitialFragmentName", "onActivityResult")),
+    )
     val SETTINGS_ACTIVITY_ON_RESULT = MethodApi(SETTINGS_ACTIVITY, "onActivityResult", listOf(INT, INT, INTENT), Scope.HOOK)
 
     // SettingsLib's Material 3 Expressive connected button group, which draws AND and OR.
@@ -172,7 +179,10 @@ object SettingsApis {
     val BUTTON_CHECKED = MethodApi(BUTTON_CHECKED_LISTENER, "onButtonChecked", listOf(TOGGLE_GROUP, INT, BOOLEAN))
     val MATERIAL_BUTTON_SET_ICON = MethodApi(MATERIAL_BUTTON, "setIcon", listOf(DRAWABLE))
 
-    val GROUP_ADAPTER = type("$SETTINGSLIB_WIDGET.SettingsPreferenceGroupAdapter")
+    val GROUP_ADAPTER = type(
+        "$SETTINGSLIB_WIDGET.SettingsPreferenceGroupAdapter",
+        Locator.DexSearch(SETTINGSLIB_WIDGET, listOf("isGroupDivider", "buildItemPositionStates")),
+    )
     val GROUP_ADAPTER_IS_DIVIDER = MethodApi(GROUP_ADAPTER, "isGroupDivider", listOf(PREFERENCE), Scope.HOOK)
 
     // androidx menus and lifecycles inside Settings, for the app bar of a page.

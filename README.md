@@ -296,6 +296,7 @@ request adding a row — that table is worth more than any claim about "Android 
 
 | Device | Android build | Vector | Triggers tested | Actions tested | Tester | Date |
 |---|---|---|---|---|---|---|
+| Pixel 8 Pro | 17 QPR1 · `CP4A.261105.040.A1` | 2.2 | Every hook resolves (self-test and host fixture) | — | @MrxSiN | 2026-11 |
 | Pixel 8 Pro | 17 QPR1 · `CP3A.261005.005` | 2.2 | Wi-Fi, Bluetooth, location, airplane | All 18 system settings | @MrxSiN | 2026-10 |
 | Pixel 8 Pro | 17 QPR1 · `CP3A.260905.009` | 2.2 | Wi-Fi, Bluetooth, location, movement, airplane | Open app, send intent, Tasker | @MrxSiN | 2026-09 |
 
@@ -305,7 +306,7 @@ On a device, `scripts/device.sh health` prints the same self-test the page shows
 scripts/device.sh health
 ```
 
-Every build in the table is also recorded, as class and member names only, under
+The latest verified build is also recorded, as class and member names only, under
 `app/src/test/resources/hosts/`, and CI checks every feature's contract against each one. To
 record a new build, run `scripts/capture-host-fixture.sh` on it. [ARCHITECTURE.md](ARCHITECTURE.md)
 explains the contracts, the fixtures and the security boundary of the editor.
@@ -428,8 +429,9 @@ the framework and both halves at once, and hands the whole report to the page.
 
 Classes inside Settings are reached by name first, which costs one `loadClass` on a build that
 matches. When a name has gone, [DexKit](https://github.com/LuckyPray/DexKit) searches that app's
-own dex for a class in the same package declaring the same methods, and the hook carries on with
-whatever it was renamed to. A search that finds more than one candidate finds nothing: hooking
+own dex for a class in the same package declaring the same methods (and, where methods alone are
+too common, fields), and the hook carries on with whatever it was renamed to. Every private Settings
+class has such a search, except the two schedule pages, whose shape ten sibling pages share. A search that finds more than one candidate finds nothing: hooking
 the wrong class inside Settings is worse than losing one feature.
 
 The search is opened only after a name has actually failed, and closed as soon as it has answered,

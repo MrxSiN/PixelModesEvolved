@@ -98,7 +98,7 @@ class FeatureContractsTest {
         for (api in declared.filterIsInstance<ClassApi>()) {
             val locator = api.locator as? Locator.DexSearch ?: continue
             assertEquals(api.id, api.knownName.substringBeforeLast('.'), locator.inPackage)
-            assertTrue(api.id, locator.declaring.size >= 2)
+            assertTrue(api.id, locator.declaring.size + locator.fields.size >= 2)
         }
     }
 

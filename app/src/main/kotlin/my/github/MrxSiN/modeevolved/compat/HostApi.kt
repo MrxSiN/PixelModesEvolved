@@ -55,8 +55,8 @@ sealed interface Locator {
     /** By name only: a class that has no safe structural description. */
     data object ByName : Locator
 
-    /** The one class in [inPackage] that declares every method in [declaring]. */
-    data class DexSearch(val inPackage: String, val declaring: List<String>) : Locator
+    /** The one class in [inPackage] that declares every method in [declaring] and every field in [fields]. */
+    data class DexSearch(val inPackage: String, val declaring: List<String>, val fields: List<String> = emptyList()) : Locator
 
     /**
      * The highest class above [of] that declares [declaring], walking up only

@@ -4,7 +4,7 @@
 
 - Baseline: `98ed3ab` + uncommitted working tree as found on 2026-10-09 (`git diff HEAD | sha256sum`
   = `12632f2d3f3df07f11c996fcf2c2a6d1b7e465786690c719358fdf26cd5bc5dc`).
-- Rewrite: baseline + the changes listed in REWRITE_ARCHITECTURE.md.
+- Rewrite: baseline + the rewrite changes (see git history).
 
 ## Environment
 

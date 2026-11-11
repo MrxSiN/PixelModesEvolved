@@ -39,7 +39,8 @@ value in `compat/SettingsApis.kt` or `compat/SystemServerApis.kt`. Each declares
   or any class above it);
 - any legitimate **fallback signatures**, tried in order;
 - for a class, a **structural locator**, describing what may stand in for it when renamed:
-  a `DexSearch` in its own package by method shape, or the `Ancestor` of a class that declares a
+  a `DexSearch` in its own package by method shape (and field names, where methods alone match
+  more than one class), or the `Ancestor` of a class that declares a
   given method.
 
 `compat/FeatureContracts.kt` attributes each of them to a **stable feature ID** (`core.Feature`,
@@ -73,7 +74,8 @@ finds. Names only; no APK, dex or code of Google's is stored. `HostCompatibility
 feature's contract against every recorded build and reports each break as
 `FEATURE [host] requires Member: what happened`. It also checks that every structural fallback
 would find exactly the class it stands in for: on `CP3A.260905.009` this caught two DexKit shapes
-that matched two and three classes, so the fallback could never have worked.
+that matched two and three classes, so the fallback could never have worked. Only the latest
+verified build is kept (`CP4A.261105.040.A1` now); older ones are in git history.
 
 To add a build: put the phone on it, run `scripts/capture-host-fixture.sh`, check the features by
 hand, and add the build to `compat/VerifiedBuilds.kt`.

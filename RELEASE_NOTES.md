@@ -1,3 +1,55 @@
+# Pixel Modes Evolved v0.0.5
+
+Fifth alpha: power and headphones triggers, a page to try a Mode's triggers, and more of Settings
+found again after a rename. Tested on a Pixel 8 Pro on **Android 17 QPR1 (November 2026)**, build
+`CP4A.261105.040.A1`, with Vector v2.2. Expect rough edges, and keep a way to recover your phone.
+
+### New triggers
+
+- **Power**: connected to power (cable, wireless charger or dock), or running on battery. Woken
+  only when the phone is plugged in or unplugged; the battery level broadcast is never registered for.
+- **Headphones**: wired or USB headphones plugged in, or none. Bluetooth headphones keep using
+  the Bluetooth trigger.
+
+### Try these triggers
+
+- A read-only page on each Mode: pretend some triggers are met and it says whether the Mode would
+  turn on, and which group did it. Nothing is read from the phone, switched or saved.
+- **Recent Mode decisions** on the compatibility page says why each automated Mode last changed,
+  keeping only the cause and the kinds of signal: no network names, addresses, places or Mode names.
+
+### Found again after a rename
+
+- Five more Settings classes (the Settings activity, the preference group adapter, the calendar
+  schedule controller, and the Mode icon provider and its icon record) are now searched for with
+  DexKit by their shape when their name has gone, instead of costing their feature. A search can
+  also match field names now. On `CP4A.261105.040.A1` every search found exactly the class it
+  stands in for.
+- The verified build moves to `CP4A.261105.040.A1`; every feature resolves on it by name.
+
+### Fixes
+
+- A Mode this module switched on is switched off at load when its triggers no longer hold, after
+  a reboot, update or reload. Modes switched on by you or a schedule are left alone.
+- Saving a system-setting action while its Mode is on reads every new setting's value to restore
+  before writing any.
+- The Send an intent action refuses protected broadcasts, and actions run for the main user only.
+- Releases publish a SHA-256 beside the APK.
+
+### Install
+
+1. Install `PixelModesEvolved-v0.0.5.apk`
+2. Enable Pixel Modes Evolved in Vector (static scope: System Framework and Settings)
+3. Reboot once, or let system_server hot reload if you are updating
+4. Settings → Modes → a Mode → Mode settings
+
+### Notes
+
+- Upgrading keeps your triggers, actions and Mode icons.
+- If a build signed with a different key is installed, uninstall it first.
+
+---
+
 # Pixel Modes Evolved v0.0.4
 
 Fourth alpha: the flying trigger now actually notices a flight, and custom Modes get many more
